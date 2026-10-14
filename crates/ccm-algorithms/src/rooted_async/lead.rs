@@ -18,7 +18,7 @@ use super::memory::{
     AgentState, Candidate, Command, ErrandResult, Lead, Link, Memory, Phase, Plan, Target, Task,
     VacateRule,
 };
-use super::probe::resolve;
+use super::probe::{resolve, Claimants};
 use super::world::{Cx, Note};
 use crate::common::{EdgeType, NodeType, PORT_ONE};
 use ccm_core::AgentId;
@@ -254,9 +254,10 @@ fn start_own_probe(cx: &mut Cx<'_, '_>, lead: &mut Lead, first: u16) {
 /// holds (Algorithm 4 lines 25-50) and keep the best edge so far.
 fn finish_batch(cx: &mut Cx<'_, '_>, lead: &mut Lead, first: u16) {
     let pool = cx.group_here();
+    let claimants = Claimants::new(&pool);
     let probe_seq = lead.seq;
     for scout in pool.iter().filter(|m| m.scout.seq == probe_seq) {
-        let resolution = resolve(&scout.scout, &pool);
+        let resolution = resolve(&scout.scout, &claimants);
         cx.note(Note::Probed {
             head: cx.node,
             resolution,

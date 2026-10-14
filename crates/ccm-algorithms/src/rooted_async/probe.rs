@@ -4,6 +4,7 @@
 use super::memory::{AgentState, Memory, Reached, ScoutRecord};
 use crate::common::NodeType;
 use ccm_core::{AgentId, PortId};
+use std::collections::HashMap;
 
 /// The rule that decided a probe, named as in the paper.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -52,19 +53,43 @@ pub struct Resolution {
     pub rule: ProbeRule,
 }
 
+/// The vacated members of a group, by the port-1 neighbour each remembers:
+/// what Rules R3a and R3c match a scout's findings against.
+///
+/// Built once per conclusion, so matching every scout of a batch costs one
+/// pass over the group rather than one per scout. Where two members claim the
+/// same neighbour the lowest ID is kept, as a search of the group in ID order
+/// would find.
+pub(super) struct Claimants<'a> {
+    by_p1: HashMap<(AgentId, PortId), &'a Memory>,
+}
+
+impl<'a> Claimants<'a> {
+    pub fn new(pool: &'a [Memory]) -> Self {
+        let mut by_p1 = HashMap::new();
+        for member in pool {
+            if member.state != AgentState::SettledScout {
+                continue;
+            }
+            if let (Some(p1), Some(port)) = (member.p1_neighbor, member.port_at_p1_neighbor) {
+                by_p1.entry((p1, port)).or_insert(member);
+            }
+        }
+        Self { by_p1 }
+    }
+
+    fn find(&self, p1: AgentId, port: PortId) -> Option<&'a Memory> {
+        self.by_p1.get(&(p1, port)).copied()
+    }
+}
+
 /// Concludes one probe at the head, after every scout is back.
 ///
-/// `pool` is the group as it stands at the head. A vacated node's agent is in
-/// it, so a vacated node is recognised by finding the group member whose stored
-/// port-1 neighbour is the one the scout saw.
-pub(super) fn resolve(scout: &ScoutRecord, pool: &[Memory]) -> Resolution {
-    let claimant = |p1: AgentId, port: PortId| {
-        pool.iter().find(|member| {
-            member.state == AgentState::SettledScout
-                && member.p1_neighbor == Some(p1)
-                && member.port_at_p1_neighbor == Some(port)
-        })
-    };
+/// `claimants` indexes the group as it stands at the head. A vacated node's
+/// agent is in it, so a vacated node is recognised by finding the group member
+/// whose stored port-1 neighbour is the one the scout saw.
+pub(super) fn resolve(scout: &ScoutRecord, claimants: &Claimants<'_>) -> Resolution {
+    let claimant = |p1: AgentId, port: PortId| claimants.find(p1, port);
     let empty = |rule| Resolution {
         port: scout.port,
         owner: None,

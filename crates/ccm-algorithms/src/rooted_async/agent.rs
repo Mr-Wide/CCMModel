@@ -6,7 +6,7 @@
 
 use super::lead;
 use super::memory::{AgentState, Command, ErrandResult, Reached, Task, VacateRule};
-use super::probe::resolve;
+use super::probe::{resolve, Claimants};
 use super::world::{Action, Cx, Note, World};
 use crate::common::{EdgeType, PORT_ONE};
 use ccm_core::{AgentId, PortId};
@@ -63,7 +63,7 @@ pub(super) fn activate(world: &World<'_>, id: AgentId) -> Action {
 
 /// A group member waiting at the head: carry out the lead's newest command.
 fn follow(cx: &mut Cx<'_, '_>) {
-    let Some(lead) = cx.others().find_map(|m| m.lead) else {
+    let Some(lead) = cx.lead_here() else {
         return;
     };
     if lead.seq <= cx.me.seen_seq {
@@ -98,19 +98,10 @@ fn follow(cx: &mut Cx<'_, '_>) {
 /// Records this agent's place in the group, which fixes the port it probes,
 /// and among the unsettled agents, which fixes where a scatter sends it.
 pub(super) fn rank(cx: &mut Cx<'_, '_>) {
-    let me = cx.me.id;
-    let group = cx.group_here();
-    cx.me.rank = count(group.iter().filter(|m| m.id < me));
-    cx.me.unsettled_rank = count(
-        group
-            .iter()
-            .filter(|m| m.state == AgentState::Unsettled && m.id > me),
-    );
+    let (below, unsettled_above) = cx.group_ranks();
+    cx.me.rank = below;
+    cx.me.unsettled_rank = unsettled_above;
     cx.me.scatter = super::memory::ScatterTally::default();
-}
-
-fn count<T>(items: impl Iterator<Item = T>) -> u16 {
-    u16::try_from(items.count()).expect("the group fits the port domain")
 }
 
 /// The `index`-th port at the head in increasing order, skipping the parent
@@ -212,10 +203,11 @@ pub(super) fn tally(
     if me.state != AgentState::Unsettled {
         return;
     }
+    let claimants = Claimants::new(pool);
     let mut results: Vec<_> = pool
         .iter()
         .filter(|m| m.scout.seq == probe_seq)
-        .map(|m| resolve(&m.scout, pool))
+        .map(|m| resolve(&m.scout, &claimants))
         .collect();
     results.sort_by_key(|r| r.port);
     for result in results.into_iter().filter(|r| r.owner.is_none()) {

@@ -28,6 +28,11 @@ pub(super) struct Run<'g, M, R> {
     /// The most bits any agent's memory has held after a write.
     memory_bits: u32,
     stale_commits: u64,
+    /// Which agents are done (settled, idle, at home, not leading), kept up to
+    /// date for the agents each step touches, so the end of the run is
+    /// noticed without rescanning every agent after every step.
+    done: Vec<bool>,
+    done_count: usize,
 }
 
 impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
@@ -87,6 +92,17 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 occupants,
                 home_owner: vec![None; graph.node_count()],
                 version: vec![0; graph.node_count()],
+                group_at: {
+                    let mut lists = vec![Vec::new(); graph.node_count()];
+                    lists[root.index()] = (0..k_u32).map(AgentId).collect();
+                    lists
+                },
+                lead_holder: Some(AgentId(0)),
+                unsettled_at: {
+                    let mut lists = vec![Vec::new(); graph.node_count()];
+                    lists[root.index()] = (0..k_u32).map(AgentId).collect();
+                    lists
+                },
             },
             metrics,
             recorder,
@@ -99,6 +115,8 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             widths,
             memory_bits,
             stale_commits: 0,
+            done: vec![false; k],
+            done_count: 0,
         }
     }
 
@@ -151,6 +169,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             self.changed = false;
             for index in 0..count {
                 self.changed |= self.world.land(agent(index));
+                self.refresh(agent(index));
             }
             let actions: Vec<Action> = (0..count)
                 .map(|index| activate(&self.world, agent(index)))
@@ -223,6 +242,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             self.activations += 1;
             let finished_cycle = if self.world.land(id) {
                 self.changed = true;
+                self.refresh(id);
                 true
             } else {
                 let action = activate(&self.world, id);
@@ -267,6 +287,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             self.activations += 1;
             let finished_cycle = if self.world.land(id) {
                 self.changed = true;
+                self.refresh(id);
                 true
             } else if let Some(look) = pending[id.index()].take() {
                 let moving = look.action.depart.is_some();
@@ -361,18 +382,31 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 self.changed = true;
                 self.world.version[node.index()] += 1;
             }
+            let restate = before != action.own.state;
             self.world.agents[id.index()].memory = action.own;
+            self.track_lead(id);
+            if restate {
+                self.world.index_remove(id, node);
+                self.world.index_insert(id, node);
+            }
             self.measure(id);
         }
-        if let Some(other) = action.other {
+        if let Some(other) = action.other.as_ref() {
             let target = other.id;
             if self.world.agents[target.index()].position != Position::At(node) {
                 return Err(RootedAsyncError::Protocol("wrote an agent at another node"));
             }
             let before = self.world.agents[target.index()].memory.state;
             self.settle_check(target, before, other.state, node)?;
-            self.world.agents[target.index()].memory = other;
+            let restate = before != other.state;
+            self.world.agents[target.index()].memory = other.clone();
+            self.track_lead(target);
+            if restate {
+                self.world.index_remove(target, node);
+                self.world.index_insert(target, node);
+            }
             self.measure(target);
+            self.refresh(target);
             self.changed = true;
             self.world.version[node.index()] += 1;
         }
@@ -384,7 +418,11 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 .ok_or(RootedAsyncError::Protocol(
                     "left through a port the node lacks",
                 ))?;
-            self.world.occupants[node.index()].retain(|&other| other != id);
+            let here = &mut self.world.occupants[node.index()];
+            if let Ok(at) = here.binary_search(&id) {
+                here.remove(at);
+            }
+            self.world.index_remove(id, node);
             self.world.version[node.index()] += 1;
             self.world.agents[id.index()].position = Position::InTransit {
                 from: node,
@@ -394,6 +432,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             self.metrics.agent_moves(1);
             self.changed = true;
         }
+        self.refresh(id);
         for note in action.notes {
             self.record(node, note)?;
         }
@@ -505,21 +544,43 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
         Ok(())
     }
 
+    /// Keeps [`World::lead_holder`] in step with the memory just written.
+    fn track_lead(&mut self, id: AgentId) {
+        if self.world.agents[id.index()].memory.lead.is_some() {
+            self.world.lead_holder = Some(id);
+        } else if self.world.lead_holder == Some(id) {
+            self.world.lead_holder = None;
+        }
+    }
+
     fn measure(&mut self, id: AgentId) {
         let bits = self.widths.memory(&self.world.agents[id.index()].memory);
         self.memory_bits = self.memory_bits.max(bits);
     }
 
     fn finished(&self) -> bool {
-        self.world.agents.iter().all(|agent| {
-            let memory = &agent.memory;
-            memory.state == AgentState::Settled
-                && memory.task == super::memory::Task::Idle
-                && memory.lead.is_none()
-                && agent
-                    .home
-                    .is_some_and(|home| agent.position == Position::At(home))
-        })
+        self.done_count == self.done.len()
+    }
+
+    /// Re-judges whether one agent is done after something about it changed.
+    fn refresh(&mut self, id: AgentId) {
+        let agent = &self.world.agents[id.index()];
+        let memory = &agent.memory;
+        let done = memory.state == AgentState::Settled
+            && memory.task == super::memory::Task::Idle
+            && memory.lead.is_none()
+            && agent
+                .home
+                .is_some_and(|home| agent.position == Position::At(home));
+        let slot = &mut self.done[id.index()];
+        if *slot != done {
+            *slot = done;
+            if done {
+                self.done_count += 1;
+            } else {
+                self.done_count -= 1;
+            }
+        }
     }
 
     fn tree(&self) -> Vec<TreeEdge> {
