@@ -3,7 +3,8 @@
 //! 1. **Dispersion**: every run ends with at most one agent per node, each
 //!    agent settled at its own home.
 //! 2. **Asynchrony**: correctness does not depend on the schedule. Runs under
-//!    random interleavings and with any one agent held back reach the same
+//!    random interleavings, with cycles atomic or split into a look and a
+//!    later commit, and with any one agent held back, reach the same
 //!    placement as synchronous rounds.
 //! 3. **Time**: finding the next node takes O(1) epochs, and the whole run
 //!    O(k). Checked as its parts:
@@ -193,6 +194,8 @@ fn every_run_ends_with_at_most_one_agent_per_node() {
         Schedule::Synchronous,
         Schedule::Random { seed: 1 },
         Schedule::Random { seed: 2 },
+        Schedule::Interleaved { seed: 1 },
+        Schedule::Interleaved { seed: 2 },
     ];
     let nodes = 24;
     for (name, family) in families(nodes) {
@@ -238,6 +241,35 @@ fn random_schedules_really_interleave() {
     }
 }
 
+/// Section 2 lets other agents act between an agent's look and its write.
+/// Under `Interleaved` they do, in every run: commits act on views that have
+/// gone stale, and no write ever lands on memory changed since its look (that
+/// would fail the run as a `WriteConflict`).
+#[test]
+fn cycles_really_overlap_under_the_interleaved_schedule() {
+    let k = 16;
+    for (name, family) in families(k) {
+        let g = graph(&family, k, 3);
+        for seed in 0..4 {
+            let result = run(&g, k, Schedule::Interleaved { seed });
+            assert!(
+                result.stale_commits > 0,
+                "{name} seed {seed}: no commit ever acted on a stale view"
+            );
+        }
+    }
+    assert_eq!(
+        run(
+            &graph(&GraphFamily::Path, k, 0),
+            k,
+            Schedule::Random { seed: 0 }
+        )
+        .stale_commits,
+        0,
+        "atomic cycles cannot go stale"
+    );
+}
+
 /// The schedule never changes where agents end up: decisions depend only on
 /// what scouts find, never on who moved first.
 #[test]
@@ -248,8 +280,14 @@ fn the_schedule_never_changes_the_placement() {
         for agents in [7, nodes] {
             let reference = homes(&run(&g, agents, Schedule::Synchronous));
             for seed in 0..8 {
-                let result = run(&g, agents, Schedule::Random { seed });
-                assert_eq!(homes(&result), reference, "{name}, k={agents}, seed {seed}");
+                for schedule in [Schedule::Random { seed }, Schedule::Interleaved { seed }] {
+                    let result = run(&g, agents, schedule);
+                    assert_eq!(
+                        homes(&result),
+                        reference,
+                        "{name}, k={agents}, {schedule:?}"
+                    );
+                }
             }
         }
     }
@@ -288,6 +326,7 @@ fn time_bounds_up_to(sizes: &[usize]) {
             for (label, schedule) in [
                 ("sync", Schedule::Synchronous),
                 ("random", Schedule::Random { seed: 5 }),
+                ("interleaved", Schedule::Interleaved { seed: 5 }),
             ] {
                 let g = graph(&family, k, 1);
                 let result = run(&g, k, schedule);
@@ -344,6 +383,7 @@ fn memory_up_to(sizes: &[usize]) -> Vec<(String, u32, f64)> {
             for (label, schedule) in [
                 ("sync", Schedule::Synchronous),
                 ("random", Schedule::Random { seed: 5 }),
+                ("interleaved", Schedule::Interleaved { seed: 5 }),
             ] {
                 let result = run(&g, k, schedule);
                 #[allow(clippy::cast_precision_loss)]

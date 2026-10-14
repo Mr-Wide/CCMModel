@@ -27,6 +27,7 @@ pub(super) struct Run<'g, M, R> {
     widths: Widths,
     /// The most bits any agent's memory has held after a write.
     memory_bits: u32,
+    stale_commits: u64,
 }
 
 impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
@@ -85,6 +86,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 agents,
                 occupants,
                 home_owner: vec![None; graph.node_count()],
+                version: vec![0; graph.node_count()],
             },
             metrics,
             recorder,
@@ -96,6 +98,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             changed: false,
             widths,
             memory_bits,
+            stale_commits: 0,
         }
     }
 
@@ -113,6 +116,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 agent,
                 period,
             } => self.run_asynchronous(epoch_limit, seed, Some((agent, period.max(1))))?,
+            Schedule::Interleaved { seed } => self.run_interleaved(epoch_limit, seed)?,
         };
         let tree = self.tree();
         Ok((
@@ -126,6 +130,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 steps: self.steps,
                 constructed_at: self.constructed_at,
                 memory_bits: self.memory_bits,
+                stale_commits: self.stale_commits,
             },
             self.metrics,
             self.recorder,
@@ -238,11 +243,101 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
         }
     }
 
+    /// The paper's ASYNC with each cycle split into a look and a later commit;
+    /// see [`Schedule::Interleaved`]. A cycle with a move completes on arrival,
+    /// as under `Random`.
+    fn run_interleaved(&mut self, limit: u64, seed: u64) -> Result<Termination, RootedAsyncError> {
+        let count = self.world.agents.len();
+        let mut rng = DeterministicRng::new(seed);
+        let mut pending: Vec<Option<Pending>> = (0..count).map(|_| None).collect();
+        let mut completed = vec![false; count];
+        let mut remaining = count;
+        // An epoch with no change only proves a deadlock if the one before it
+        // had none either: a cycle completing in the first may have looked at
+        // a state that has since changed.
+        let mut quiet_epochs = 0;
+        loop {
+            if self.finished() {
+                return Ok(Termination::Completed);
+            }
+            if self.epoch >= limit {
+                return Ok(Termination::RoundLimitReached { limit });
+            }
+            let id = agent(rng.index(count).expect("at least one agent"));
+            self.activations += 1;
+            let finished_cycle = if self.world.land(id) {
+                self.changed = true;
+                true
+            } else if let Some(look) = pending[id.index()].take() {
+                let moving = look.action.depart.is_some();
+                self.commit(id, look)?;
+                !moving
+            } else {
+                let action = activate(&self.world, id);
+                let seen_other = action
+                    .other
+                    .as_ref()
+                    .map(|other| self.world.memory(other.id).clone());
+                let node = self.world.agents[id.index()].position.node();
+                pending[id.index()] = Some(Pending {
+                    seen_own: self.world.memory(id).clone(),
+                    seen_other,
+                    seen_version: self.world.version[node.index()],
+                    action,
+                });
+                false
+            };
+            if finished_cycle && !completed[id.index()] {
+                completed[id.index()] = true;
+                remaining -= 1;
+            }
+            if remaining == 0 {
+                quiet_epochs = if self.changed { 0 } else { quiet_epochs + 1 };
+                self.end_epoch_after(quiet_epochs >= 2)?;
+                completed.fill(false);
+                remaining = count;
+                self.changed = false;
+            }
+        }
+    }
+
+    /// Lands a look's writes. The world may have moved on since the look; the
+    /// memory being written must not have, or the write would discard a change
+    /// its writer never saw.
+    fn commit(&mut self, id: AgentId, look: Pending) -> Result<(), RootedAsyncError> {
+        let Pending {
+            seen_own,
+            seen_other,
+            seen_version,
+            action,
+        } = look;
+        let node = self.world.agents[id.index()].position.node();
+        if self.world.version[node.index()] != seen_version {
+            self.stale_commits += 1;
+        }
+        if action.own != seen_own && *self.world.memory(id) != seen_own {
+            return Err(RootedAsyncError::WriteConflict(id));
+        }
+        if let (Some(seen), Some(written)) = (&seen_other, &action.other) {
+            if *self.world.memory(written.id) != *seen {
+                return Err(RootedAsyncError::WriteConflict(written.id));
+            }
+        }
+        // An agent that changed nothing of its own keeps whatever it holds now.
+        let keep_own = action.own == seen_own;
+        self.apply(id, action, keep_own)
+    }
+
     fn end_epoch(&mut self) -> Result<(), RootedAsyncError> {
+        let stuck = !self.changed;
+        self.end_epoch_after(stuck)
+    }
+
+    fn end_epoch_after(&mut self, stuck: bool) -> Result<(), RootedAsyncError> {
         self.epoch += 1;
         self.metrics.logical_rounds(RoundKind::Other, 1);
         self.checkpoint();
-        if !self.changed && !self.finished() {
+        if stuck && !self.finished() {
             // Every agent acted on an unchanging state and none changed it:
             // nothing ever will.
             return Err(RootedAsyncError::Deadlock { epoch: self.epoch });
@@ -264,6 +359,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             self.settle_check(id, before, action.own.state, node)?;
             if action.own != self.world.agents[id.index()].memory {
                 self.changed = true;
+                self.world.version[node.index()] += 1;
             }
             self.world.agents[id.index()].memory = action.own;
             self.measure(id);
@@ -278,6 +374,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             self.world.agents[target.index()].memory = other;
             self.measure(target);
             self.changed = true;
+            self.world.version[node.index()] += 1;
         }
         if let Some(port) = action.depart {
             let edge = self
@@ -288,6 +385,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                     "left through a port the node lacks",
                 ))?;
             self.world.occupants[node.index()].retain(|&other| other != id);
+            self.world.version[node.index()] += 1;
             self.world.agents[id.index()].position = Position::InTransit {
                 from: node,
                 to: edge.neighbor,
@@ -483,6 +581,17 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 .collect(),
         });
     }
+}
+
+/// A cycle that has looked and not yet committed.
+struct Pending {
+    /// The agent's own memory when it looked.
+    seen_own: Memory,
+    /// The memory of the agent it writes, when it looked.
+    seen_other: Option<Memory>,
+    /// The node's version when it looked.
+    seen_version: u64,
+    action: Action,
 }
 
 fn agent(index: usize) -> AgentId {

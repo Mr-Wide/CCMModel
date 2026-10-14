@@ -49,6 +49,9 @@ pub enum SchedulerModel {
     Asynchronous,
     /// As `Asynchronous`, but `agent` is activated only every `period` steps.
     Starved { agent: u32, period: u32 },
+    /// As `Asynchronous`, but each cycle's look and its write are separate
+    /// steps, so other agents act in between.
+    Interleaved,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

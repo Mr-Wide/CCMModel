@@ -17,6 +17,9 @@ pub(super) struct World<'g> {
     pub occupants: Vec<Vec<AgentId>>,
     /// Simulator only: the agent whose home each node is.
     pub home_owner: Vec<Option<AgentId>>,
+    /// Simulator only: bumped whenever anything an agent at the node could
+    /// see changes, so a commit can tell whether its look went stale.
+    pub version: Vec<u64>,
 }
 
 impl World<'_> {
@@ -40,6 +43,7 @@ impl World<'_> {
         };
         agent.position = Position::At(to);
         agent.memory.arrival_port = Some(arrival_port);
+        self.version[to.index()] += 1;
         let list = &mut self.occupants[to.index()];
         let at = list.partition_point(|&other| other < id);
         list.insert(at, id);

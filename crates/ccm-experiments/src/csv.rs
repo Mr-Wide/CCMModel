@@ -170,6 +170,7 @@ mod tests {
         for (scheduler, label, unit) in [
             (SchedulerModel::Synchronous, "synchronous", "round"),
             (SchedulerModel::Asynchronous, "asynchronous", "epoch"),
+            (SchedulerModel::Interleaved, "interleaved", "epoch"),
             (
                 SchedulerModel::Starved {
                     agent: 2,

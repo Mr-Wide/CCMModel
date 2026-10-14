@@ -256,8 +256,11 @@ impl WasmSimulation {
 
     fn run_rooted_async(&self) -> Result<SimulationOutput, AdapterError> {
         use ccm_algorithms::rooted_async::{simulate, Schedule};
+        // The page's asynchronous schedule is the paper's ASYNC in full: a
+        // random order in which each cycle's look and write are separate
+        // steps, so other agents act in between.
         let schedule = if self.algorithm == AlgorithmSelector::RootedAsyncRandom {
-            Schedule::Random {
+            Schedule::Interleaved {
                 seed: self.schedule_seed,
             }
         } else {

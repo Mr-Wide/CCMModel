@@ -74,6 +74,14 @@ pub enum Schedule {
         agent: AgentId,
         period: u32,
     },
+    /// The paper's ASYNC without atomic cycles (Section 2). Each cycle is two
+    /// steps of the seeded random order: a look, which reads the node and
+    /// computes from it, and a later commit, which writes and leaves. Any
+    /// number of other agents' steps can fall in between, so a commit may act
+    /// on a stale view. A commit that would write over memory someone else
+    /// has changed since the look fails the run: under the paper's model that
+    /// change would be silently lost.
+    Interleaved { seed: u64 },
 }
 
 /// One probe the head concluded, with the rule that decided it.
@@ -119,6 +127,10 @@ pub struct RootedAsyncResult {
     /// Theorem 2 bounds by `O(log(k + Δ))`. See [`Widths`] for how a field is
     /// charged.
     pub memory_bits: u32,
+    /// Under [`Schedule::Interleaved`], the cycles that committed after
+    /// something at their node had changed since they looked: the overlap
+    /// atomic cycles never have. Zero under the other schedules.
+    pub stale_commits: u64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -150,7 +162,9 @@ pub enum RootedAsyncError {
         agent: AgentId,
         node: NodeId,
     },
-    /// Two writes to one agent in a synchronous round.
+    /// Two writes to one agent in a synchronous round, or, under
+    /// [`Schedule::Interleaved`], a write to memory another agent changed
+    /// after the writer looked.
     WriteConflict(AgentId),
     /// An epoch passed with no agent changing anything.
     Deadlock {

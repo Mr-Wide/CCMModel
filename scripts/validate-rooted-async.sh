@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Validates RootedAsync against the three properties the paper claims, and
-# prints one PASS/FAIL line per property.
+# Validates RootedAsync against the properties the paper claims, and prints
+# one PASS/FAIL line per property.
 #
-#   ./scripts/validate-rooted-async.sh          # the test suites, ~1 minute
+#   ./scripts/validate-rooted-async.sh          # the test suites, ~2 minutes
 #   ./scripts/validate-rooted-async.sh --full   # also the 8,208-run sweeps
 #
 #   0. The paper's own example run (Appendix B) ends as the paper says.
 #   1. Dispersion: every run ends with at most one agent per node.
-#   2. Asynchrony: random interleavings and any one slow agent give the same
-#      placement as synchronous rounds.
+#   2. Asynchrony: random orders, with each cycle atomic or split into a look
+#      and a later write, and any one slow agent, all give the same placement
+#      as synchronous rounds.
 #   3. Time: O(1) epochs per DFS step whatever k or the degree, at most 4k
 #      steps, linear Retrace; hence O(k) epochs in all.
 #   4. Memory: O(log(k + Δ)) bits per agent between cycles (Theorem 2).
@@ -53,7 +54,8 @@ check "1. Dispersion: at most one agent per node" rooted_async_validation \
   every_run_ends_with_at_most_one_agent_per_node
 check "2. Asynchrony: schedule-independent, interleaved, robust to a slow agent" \
   rooted_async_validation random_schedules_really_interleave \
-  the_schedule_never_changes_the_placement any_one_slow_agent_only_delays_the_run
+  the_schedule_never_changes_the_placement any_one_slow_agent_only_delays_the_run \
+  cycles_really_overlap_under_the_interleaved_schedule
 check "3. Time: O(1) epochs per step, O(k) in total" rooted_async_validation \
   the_next_node_costs_constant_epochs the_time_bounds_hold_up_to_256_agents \
   a_step_costs_the_same_whatever_the_degree
@@ -63,7 +65,7 @@ check "4. Memory: O(log(k+Δ)) bits per agent" rooted_async_validation \
 memory_log="$last_log"
 
 if $full; then
-  for schedule in "" 11; do
+  for schedule in "" 11 i11; do
     label="Local view vs truth, 8,208 runs, schedule ${schedule:-synchronous}"
     out=$(cargo run --quiet --release -p ccm-experiments --example rooted_async_sweep -- $schedule 2>&1)
     if echo "$out" | grep -q ', 0 failed'; then

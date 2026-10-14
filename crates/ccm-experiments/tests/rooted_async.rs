@@ -60,6 +60,7 @@ fn assert_dispersed(result: &RootedAsyncResult, case: &str) {
 fn schedules() -> Vec<Schedule> {
     let mut all = vec![Schedule::Synchronous];
     all.extend((0..6).map(|seed| Schedule::Random { seed }));
+    all.extend((0..6).map(|seed| Schedule::Interleaved { seed }));
     all
 }
 

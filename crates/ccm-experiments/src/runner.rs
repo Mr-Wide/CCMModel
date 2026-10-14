@@ -177,6 +177,7 @@ pub fn rooted_async_schedule(
     match scheduler {
         SchedulerModel::Synchronous => Schedule::Synchronous,
         SchedulerModel::Asynchronous => Schedule::Random { seed },
+        SchedulerModel::Interleaved => Schedule::Interleaved { seed },
         SchedulerModel::Starved { agent, period } => Schedule::Starve {
             seed,
             agent: AgentId(agent),
@@ -335,13 +336,14 @@ pub fn algorithm_label(algorithm: Algorithm) -> &'static str {
     }
 }
 
-/// The scheduler, as a CSV value: `synchronous`, `asynchronous`, or
-/// `starved:<agent>:<period>`.
+/// The scheduler, as a CSV value: `synchronous`, `asynchronous`,
+/// `interleaved`, or `starved:<agent>:<period>`.
 #[must_use]
 pub fn scheduler_label(scheduler: SchedulerModel) -> String {
     match scheduler {
         SchedulerModel::Synchronous => "synchronous".to_owned(),
         SchedulerModel::Asynchronous => "asynchronous".to_owned(),
+        SchedulerModel::Interleaved => "interleaved".to_owned(),
         SchedulerModel::Starved { agent, period } => format!("starved:{agent}:{period}"),
     }
 }
@@ -352,7 +354,9 @@ pub fn scheduler_label(scheduler: SchedulerModel) -> String {
 pub fn time_unit(scheduler: SchedulerModel) -> &'static str {
     match scheduler {
         SchedulerModel::Synchronous => "round",
-        SchedulerModel::Asynchronous | SchedulerModel::Starved { .. } => "epoch",
+        SchedulerModel::Asynchronous
+        | SchedulerModel::Interleaved
+        | SchedulerModel::Starved { .. } => "epoch",
     }
 }
 
