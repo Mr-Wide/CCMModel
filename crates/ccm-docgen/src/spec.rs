@@ -443,8 +443,8 @@ pub static CHARTS: &[Chart] = &[
                 edge carrying port 1 at one of its ends. Two things carry the O(k) bound: the \
                 search stops at the first batch that finds somewhere to go, and the traversal \
                 stops at dispersion rather than finishing the tree. Either way out, dispersion \
-                or the root being popped, is followed by retrace, which walks the scouts home. \
-                A run that hits the round limit stops without retrace.",
+                or the root being popped, is followed by retrace, which walks the scouts home \
+                along the tree. A run that hits the round limit stops without retrace.",
         nodes: &[
             n("start", "run() / simulate()", 0.0, 0.0, Shape::Entry, None),
             n(
@@ -481,11 +481,11 @@ pub static CHARTS: &[Chart] = &[
             ),
             n(
                 "post",
-                "post_order() walk,|drop scouts at home",
+                "tour() of the tree,|drop scouts at home",
                 -1.5,
                 4.0,
                 Shape::Step,
-                Some("post_order"),
+                Some("tour"),
             ),
             n("done", "Completed", -1.5, 5.0, Shape::Terminal, None),
             n(

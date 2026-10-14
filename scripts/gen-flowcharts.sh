@@ -214,8 +214,10 @@ the graph instead of with the agents:
   dispersion is the goal.
 
 `traverse` has two ways out, dispersion or the root being popped, and `run`
-follows either with `retrace`, which walks the tree in post-order and drops each
-travelling scout at its home. A run that hits the round limit stops without
+follows either with `retrace`, which walks the scouts home along the tree: a
+depth-first tour from wherever the head finished, one edge per step, dropping
+each scout at its home. Vacated scouts travel with the group throughout, so no
+agent ever moves except along an edge. A run that hits the round limit stops without
 retrace.
 
 ```mermaid
@@ -252,13 +254,13 @@ flowchart TD
     N -- no --> D
     N -- yes --> R
 
-    R --> S["post_order() walk, drop each scout at its home"]
+    R --> S["tour() of the tree from the head, drop each scout at its home"]
     S --> Z["Termination::Completed"]
 ```
 
 HEADER
 
-block "$P1" traverse neighbourhood_search choose_next_edge must_defer awaits_port_one advance apply_can_vacate apply_parent_vacate retrace
+block "$P1" traverse neighbourhood_search choose_next_edge must_defer awaits_port_one advance apply_can_vacate apply_parent_vacate join_group retrace tour
 
 cat >> "$out" <<'HEADER'
 ---

@@ -138,7 +138,7 @@
 </div></div>
 </section>
 <section class="chart-panel hidden" id="panel-p1tree" data-crate="ccm-algorithms">
-<p class="chart-blurb">A DFS that builds a port-one tree: every vertex ends up with an incident tree edge carrying port 1 at one of its ends. Two things carry the O(k) bound: the search stops at the first batch that finds somewhere to go, and the traversal stops at dispersion rather than finishing the tree. Either way out, dispersion or the root being popped, is followed by retrace, which walks the scouts home. A run that hits the round limit stops without retrace.</p>
+<p class="chart-blurb">A DFS that builds a port-one tree: every vertex ends up with an incident tree edge carrying port 1 at one of its ends. Two things carry the O(k) bound: the search stops at the first batch that finds somewhere to go, and the traversal stops at dispersion rather than finishing the tree. Either way out, dispersion or the root being popped, is followed by retrace, which walks the scouts home along the tree. A run that hits the round limit stops without retrace.</p>
 <div class="chart-frame"><div class="chart-stage"><svg class="chart" viewBox="-663 -63 1287 1414" role="img" aria-label="P1Tree flowchart" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="arrow-p1tree" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
 <g class="edges">
@@ -177,7 +177,7 @@
 <g id="p1tree-trav" class="node step has-code" data-fn="traverse" tabindex="0" role="button"><rect x="-104" y="161" width="208" height="46" rx="9"/><text x="0.0" y="184.0">traverse()</text></g>
 <g id="p1tree-disp" class="node decision has-code" data-fn="note_dispersion" tabindex="0" role="button"><polygon points="0,245 112,276 0,307 -112,276"/><text x="0.0" y="276.0">dispersed?</text></g>
 <g id="p1tree-retrace" class="node step has-code" data-fn="retrace" tabindex="0" role="button"><rect x="-494" y="253" width="208" height="46" rx="9"/><text x="-390.0" y="276.0">retrace()</text></g>
-<g id="p1tree-post" class="node step has-code" data-fn="post_order" tabindex="0" role="button"><rect x="-494" y="345" width="208" height="46" rx="9"/><text x="-390.0" y="360.0">post_order() walk,</text><text x="-390.0" y="376.0">drop scouts at home</text></g>
+<g id="p1tree-post" class="node step has-code" data-fn="tour" tabindex="0" role="button"><rect x="-494" y="345" width="208" height="46" rx="9"/><text x="-390.0" y="360.0">tour() of the tree,</text><text x="-390.0" y="376.0">drop scouts at home</text></g>
 <g id="p1tree-done" class="node terminal"><rect x="-494" y="437" width="208" height="46" rx="23"/><text x="-390.0" y="460.0">Completed</text></g>
 <g id="p1tree-search" class="node step has-code" data-fn="neighbourhood_search" tabindex="0" role="button"><rect x="-104" y="345" width="208" height="46" rx="9"/><text x="0.0" y="368.0">neighbourhood_search()</text></g>
 <g id="p1tree-party" class="node step has-code" data-fn="probe_party" tabindex="0" role="button"><rect x="-104" y="437" width="208" height="46" rx="9"/><text x="0.0" y="452.0">probe_party()</text><text x="0.0" y="468.0">picks the scouts</text></g>
@@ -1115,11 +1115,13 @@ fn move_out&lt;M: Metrics&gt;(
         if self.dispersed_at_step.is_none() &amp;&amp; self.unsettled_count() == 0 {
             self.dispersed_at_step = Some(self.step);
         }
-    }</template><template data-code="retrace" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 5.1. A post-order walk of the finished tree that puts every
-    /// travelling scout back on the node it owns.
+    }</template><template data-code="retrace" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 5.1. Walks the travelling scouts home along the tree.
     ///
-    /// The scouts are all standing wherever the head finished, so the walk
-    /// visits the tree bottom-up and drops each one as its home comes past.
+    /// The scouts are all standing wherever the head finished. From there the
+    /// walk is a depth-first tour of the tree, one edge per step, and each
+    /// scout steps off when it reaches the node it owns. A tour crosses every
+    /// tree edge at most twice, so this is at most `2(k - 1)` moves, and it
+    /// stops as soon as nobody is left travelling.
     fn retrace(&amp;mut self) {
         let mut travelling: Vec&lt;usize&gt; = self
             .agents
@@ -1132,28 +1134,33 @@ fn move_out&lt;M: Metrics&gt;(
             return;
         }
 
-        // Children of each node, in the order the DFS added them, so the walk
-        // below is the same post-order the construction took.
-        let mut children: Vec&lt;Vec&lt;NodeId&gt;&gt; = vec![Vec::new(); self.graph.node_count()];
+        // The tree as undirected adjacency: each node's children in the order
+        // the DFS added them, then its parent.
+        let mut neighbours: Vec&lt;Vec&lt;NodeId&gt;&gt; = vec![Vec::new(); self.graph.node_count()];
         for index in 0..self.graph.node_count() {
             if let Some((parent, _, _)) = self.parent[index] {
-                children[parent.index()].push(NodeId(
+                neighbours[parent.index()].push(NodeId(
                     u32::try_from(index).expect(&quot;node count fits the dense ID domain&quot;),
                 ));
             }
         }
-
-        let mut order = Vec::new();
-        Self::post_order(self.root, &amp;children, &amp;mut order);
-
-        for node in order {
-            self.metrics.logical_rounds(RoundKind::Retrace, 1);
-            self.metrics.retrace();
-            self.metrics.agent_moves(travelling.len() as u64);
-            for &amp;index in &amp;travelling {
-                self.agents[index].node = node;
+        for (list, link) in neighbours.iter_mut().zip(&amp;self.parent) {
+            if let Some((parent, _, _)) = link {
+                list.push(*parent);
             }
-            self.head = node;
+        }
+
+        let walk = Self::tour(self.head, &amp;neighbours);
+        for (step, &amp;node) in walk.iter().enumerate() {
+            if step &gt; 0 {
+                self.metrics.logical_rounds(RoundKind::Retrace, 1);
+                self.metrics.retrace();
+                self.metrics.agent_moves(travelling.len() as u64);
+                for &amp;index in &amp;travelling {
+                    self.agents[index].node = node;
+                }
+                self.head = node;
+            }
             if let Some(owner) = self.settled_at[node.index()] {
                 if let Some(position) = travelling.iter().position(|&amp;i| i == owner.index()) {
                     travelling.remove(position);
@@ -1161,16 +1168,36 @@ fn move_out&lt;M: Metrics&gt;(
                     self.agents[owner.index()].node = node;
                 }
             }
-            self.checkpoint(Phase::Retrace);
+            if step &gt; 0 {
+                self.checkpoint(Phase::Retrace);
+            }
             if travelling.is_empty() {
                 break;
             }
         }
-    }</template><template data-code="post_order" data-source="crates/ccm-algorithms/src/p1tree.rs">    fn post_order(node: NodeId, children: &amp;[Vec&lt;NodeId&gt;], out: &amp;mut Vec&lt;NodeId&gt;) {
-        for &amp;child in &amp;children[node.index()] {
-            Self::post_order(child, children, out);
+    }</template><template data-code="tour" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// A depth-first tour of the tree from `start`: every node it reaches,
+    /// including the steps back up, so consecutive entries are always
+    /// neighbours.
+    fn tour(start: NodeId, neighbours: &amp;[Vec&lt;NodeId&gt;]) -&gt; Vec&lt;NodeId&gt; {
+        let mut walk = vec![start];
+        // (node, the node it was entered from, next neighbour to try)
+        let mut stack: Vec&lt;(NodeId, Option&lt;NodeId&gt;, usize)&gt; = vec![(start, None, 0)];
+        while let Some(top) = stack.last_mut() {
+            let (node, from, next) = *top;
+            let Some(&amp;neighbour) = neighbours[node.index()].get(next) else {
+                stack.pop();
+                if let Some(&amp;(parent, _, _)) = stack.last() {
+                    walk.push(parent);
+                }
+                continue;
+            };
+            top.2 += 1;
+            if Some(neighbour) != from {
+                walk.push(neighbour);
+                stack.push((neighbour, Some(node), 0));
+            }
         }
-        out.push(node);
+        walk
     }</template><template data-code="neighbourhood_search" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 4.2's parallel probe: the scouts fan out over the head's ports
     /// together and come back reporting what they saw.
     ///
@@ -1374,9 +1401,9 @@ fn move_out&lt;M: Metrics&gt;(
         let was = self.node_type[target.index()];
 
         self.metrics.logical_rounds(RoundKind::Movement, 1);
-        self.metrics.group_move(self.unsettled_count());
-        self.metrics.agent_moves(self.unsettled_count() as u64);
-        self.move_unsettled_to(target);
+        self.metrics.group_move(self.group_count());
+        self.metrics.agent_moves(self.group_count() as u64);
+        self.move_group_to(target);
         self.head = target;
 
         // The edge as seen from the target, which is the direction Definition 1
@@ -1445,17 +1472,17 @@ fn move_out&lt;M: Metrics&gt;(
                 // Algorithm 3 lines 4-8: visit the port-1 neighbour and return.
                 self.metrics.agent_moves(2);
                 self.metrics.vacate();
-                self.agents[owner.index()].status = P1Status::SettledScout;
+                self.join_group(owner);
             }
             // (V3) a fullyVisited node vacates unless a neighbour is leaning on
             // it, and (V4) a partiallyVisited node always vacates.
             NodeType::FullyVisited if !vacated_neighbor =&gt; {
                 self.metrics.vacate();
-                self.agents[owner.index()].status = P1Status::SettledScout;
+                self.join_group(owner);
             }
             NodeType::PartiallyVisited =&gt; {
                 self.metrics.vacate();
-                self.agents[owner.index()].status = P1Status::SettledScout;
+                self.join_group(owner);
             }
             _ =&gt; {}
         }
@@ -1487,7 +1514,7 @@ fn move_out&lt;M: Metrics&gt;(
         // Algorithm 3 lines 16-21: visit the parent and return.
         self.metrics.agent_moves(2);
         self.metrics.vacate();
-        self.agents[parent_owner.index()].status = P1Status::SettledScout;
+        self.join_group(parent_owner);
         self.agents[owner.index()].vacated_neighbor = true;
     }</template><template data-code="backtrack" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Moves the DFS head to the parent of the current node. Returns false when
     /// the root is popped, which empties the stack and ends the traversal.
@@ -1504,9 +1531,9 @@ fn move_out&lt;M: Metrics&gt;(
         }
         self.metrics.logical_rounds(RoundKind::Movement, 1);
         self.metrics.backtrack();
-        self.metrics.group_move(self.unsettled_count());
-        self.metrics.agent_moves(self.unsettled_count() as u64);
-        self.move_unsettled_to(parent);
+        self.metrics.group_move(self.group_count());
+        self.metrics.agent_moves(self.group_count() as u64);
+        self.move_group_to(parent);
         self.head = parent;
         self.checkpoint(Phase::Movement);
         Ok(true)
