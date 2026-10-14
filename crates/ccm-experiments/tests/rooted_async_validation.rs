@@ -13,6 +13,10 @@
 //!      at most twice;
 //!    - Retrace takes at most `RETRACE_PER_AGENT` epochs per agent.
 //!
+//! 4. **Memory**: Theorem 2's `O(log(k + Δ))` bits per agent. The most any
+//!    agent holds between cycles stays under a constant times `log₂(k + Δ)`,
+//!    and that constant does not grow with k.
+//!
 //! Also checked: Remark 1's bound of three probe batches per node, and
 //! Lemma 7's floor of ceil((k-2)/3) scouts.
 //!
@@ -324,4 +328,78 @@ fn a_step_costs_the_same_whatever_the_degree() {
             longest_step(&path)
         );
     }
+}
+
+/// Theorem 2: `O(log(k + Δ))` bits per agent. Returns, per case, the bits and
+/// their ratio to `log₂(k + Δ)`.
+fn memory_up_to(sizes: &[usize]) -> Vec<(String, u32, f64)> {
+    let mut rows = Vec::new();
+    for &k in sizes {
+        for (name, family) in families(k) {
+            let g = graph(&family, k, 1);
+            let delta = (0..g.node_count())
+                .map(|i| usize::from(g.degree(NodeId(u32::try_from(i).unwrap())).unwrap()))
+                .max()
+                .unwrap();
+            for (label, schedule) in [
+                ("sync", Schedule::Synchronous),
+                ("random", Schedule::Random { seed: 5 }),
+            ] {
+                let result = run(&g, k, schedule);
+                #[allow(clippy::cast_precision_loss)]
+                let log = ((k + delta) as f64).log2();
+                let ratio = f64::from(result.memory_bits) / log;
+                let case = format!("{name} k={k} Δ={delta} {label}");
+                println!(
+                    "{case:<40} {:>5} bits  {ratio:>6.2} × log₂(k+Δ)",
+                    result.memory_bits
+                );
+                rows.push((case, result.memory_bits, ratio));
+            }
+        }
+    }
+    rows
+}
+
+/// Bits per `log₂(k + Δ)` any run may use. Observed between 24 and 44 for k
+/// up to 256 across every family, the ratio falling slightly as k grows.
+const MEMORY_PER_LOG: f64 = 48.0;
+
+fn assert_memory_logarithmic(sizes: &[usize]) {
+    let rows = memory_up_to(sizes);
+    for (case, bits, ratio) in &rows {
+        assert!(
+            *ratio <= MEMORY_PER_LOG,
+            "{case}: {bits} bits is {ratio:.1} × log₂(k+Δ), over {MEMORY_PER_LOG}"
+        );
+    }
+    // Logarithmic, not merely small: the ratio must not climb with k. Compare
+    // each family's first and last size.
+    let (first, last) = (sizes[0], sizes[sizes.len() - 1]);
+    for (name, _) in families(first) {
+        let ratio_at = |k: usize| {
+            rows.iter()
+                .filter(|(case, _, _)| case.starts_with(&format!("{name} k={k} ")))
+                .map(|row| row.2)
+                .fold(0.0, f64::max)
+        };
+        assert!(
+            ratio_at(last) <= ratio_at(first) * 1.1,
+            "{name}: {:.1} × log₂(k+Δ) at k={last} against {:.1} at k={first}",
+            ratio_at(last),
+            ratio_at(first)
+        );
+    }
+}
+
+#[test]
+fn memory_stays_logarithmic_in_k_and_the_degree() {
+    assert_memory_logarithmic(&[8, 16, 32, 64]);
+}
+
+/// The same check at sizes too slow for every `cargo test`.
+#[test]
+#[ignore = "slow; run by scripts/validate-rooted-async.sh"]
+fn memory_stays_logarithmic_up_to_256_agents() {
+    assert_memory_logarithmic(&[8, 64, 128, 256]);
 }

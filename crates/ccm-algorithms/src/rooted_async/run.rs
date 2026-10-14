@@ -2,6 +2,7 @@
 //! simulator makes against the global state that no agent can see.
 
 use super::agent::activate;
+use super::bits::Widths;
 use super::memory::{AgentState, AsyncAgent, Command, Lead, Memory, Phase, Plan, Position, Target};
 use super::world::{Action, Note, World};
 use super::{HeadStep, ProbeEvent, RootedAsyncError, RootedAsyncResult, Schedule};
@@ -23,6 +24,9 @@ pub(super) struct Run<'g, M, R> {
     activations: u64,
     /// Whether anything has changed since the current epoch began.
     changed: bool,
+    widths: Widths,
+    /// The most bits any agent's memory has held after a write.
+    memory_bits: u32,
 }
 
 impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
@@ -62,6 +66,19 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
         });
         let mut occupants = vec![Vec::new(); graph.node_count()];
         occupants[root.index()] = (0..k_u32).map(AgentId).collect();
+        let max_degree = (0..graph.node_count())
+            .map(|index| {
+                let node = NodeId(u32::try_from(index).expect("dense node IDs"));
+                usize::from(graph.degree(node).unwrap_or(0))
+            })
+            .max()
+            .unwrap_or(0);
+        let widths = Widths::new(k, max_degree);
+        let memory_bits = agents
+            .iter()
+            .map(|agent| widths.memory(&agent.memory))
+            .max()
+            .unwrap_or(0);
         Self {
             world: World {
                 graph,
@@ -77,6 +94,8 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             epoch: 0,
             activations: 0,
             changed: false,
+            widths,
+            memory_bits,
         }
     }
 
@@ -106,6 +125,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 probes: self.probes,
                 steps: self.steps,
                 constructed_at: self.constructed_at,
+                memory_bits: self.memory_bits,
             },
             self.metrics,
             self.recorder,
@@ -246,6 +266,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
                 self.changed = true;
             }
             self.world.agents[id.index()].memory = action.own;
+            self.measure(id);
         }
         if let Some(other) = action.other {
             let target = other.id;
@@ -255,6 +276,7 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             let before = self.world.agents[target.index()].memory.state;
             self.settle_check(target, before, other.state, node)?;
             self.world.agents[target.index()].memory = other;
+            self.measure(target);
             self.changed = true;
         }
         if let Some(port) = action.depart {
@@ -383,6 +405,11 @@ impl<'g, M: Metrics, R: Recorder> Run<'g, M, R> {
             Note::Stuck(reason) => return Err(RootedAsyncError::Protocol(reason)),
         }
         Ok(())
+    }
+
+    fn measure(&mut self, id: AgentId) {
+        let bits = self.widths.memory(&self.world.agents[id.index()].memory);
+        self.memory_bits = self.memory_bits.max(bits);
     }
 
     fn finished(&self) -> bool {

@@ -11,6 +11,7 @@
 #      placement as synchronous rounds.
 #   3. Time: O(1) epochs per DFS step whatever k or the degree, at most 4k
 #      steps, linear Retrace; hence O(k) epochs in all.
+#   4. Memory: O(log(k + Δ)) bits per agent between cycles (Theorem 2).
 #
 # The tests behind each line are in crates/ccm-experiments/tests/
 # rooted_async.rs and rooted_async_validation.rs. Exits non-zero if any fails.
@@ -57,6 +58,9 @@ check "3. Time: O(1) epochs per step, O(k) in total" rooted_async_validation \
   the_next_node_costs_constant_epochs the_time_bounds_hold_up_to_256_agents \
   a_step_costs_the_same_whatever_the_degree
 time_log="$last_log"
+check "4. Memory: O(log(k+Δ)) bits per agent" rooted_async_validation \
+  memory_stays_logarithmic
+memory_log="$last_log"
 
 if $full; then
   for schedule in "" 11; do
@@ -78,6 +82,13 @@ if [ -f "$time_log" ]; then
   echo "Property 3, per run (step = longest DFS step in epochs; bounds: step <= 40,"
   echo "steps/k <= 4, retrace/k <= 10, batches <= 3, scouts >= ceil((k-2)/3)):"
   grep -E '^(case|[a-z])' "$time_log" | grep -Ev '^(test|running)' || true
+fi
+
+# The per-run figures behind property 4.
+if [ -f "$memory_log" ]; then
+  echo
+  echo "Property 4, per run (most bits any agent held between cycles; bound: 48 x log2(k+Δ)):"
+  grep -E ' bits ' "$memory_log" || true
 fi
 
 echo

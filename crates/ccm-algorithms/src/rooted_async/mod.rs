@@ -44,12 +44,14 @@
 //!   is treated as a leaf when reached that way.
 
 mod agent;
+mod bits;
 mod lead;
 mod memory;
 mod probe;
 mod run;
 mod world;
 
+pub use bits::Widths;
 pub use memory::{AgentState, AsyncAgent, Memory, Position};
 pub use probe::ProbeRule;
 
@@ -113,6 +115,10 @@ pub struct RootedAsyncResult {
     pub steps: Vec<HeadStep>,
     /// Epochs completed when the last agent settled and Retrace began.
     pub constructed_at: Option<u64>,
+    /// The most bits any agent held between two of its cycles: the quantity
+    /// Theorem 2 bounds by `O(log(k + Δ))`. See [`Widths`] for how a field is
+    /// charged.
+    pub memory_bits: u32,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
