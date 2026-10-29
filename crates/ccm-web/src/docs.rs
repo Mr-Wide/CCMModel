@@ -121,8 +121,11 @@ fn show_chart(state: &Rc<RefCell<DocsState>>, id: &str) {
 fn show_code(state: &Rc<RefCell<DocsState>>, name: &str) {
     let app = state.borrow();
     let document = &app.document;
-    let Ok(Some(template)) = document.query_selector(&format!("template[data-code=\"{name}\"]"))
-    else {
+    let selector = format!(
+        "template[data-chart=\"{}\"][data-code=\"{name}\"]",
+        app.chart
+    );
+    let Ok(Some(template)) = document.query_selector(&selector) else {
         return;
     };
     // A <template>'s children live in its content fragment, not under the

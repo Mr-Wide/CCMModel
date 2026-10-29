@@ -15,7 +15,7 @@
 
   <main class="docs-shell">
     <div class="docs-bar">
-      <div class="chart-tabs" role="tablist"><button class="chart-tab" type="button" data-chart="drop">Drop and Freeze</button><button class="chart-tab" type="button" data-chart="help">Help by Scouts</button><button class="chart-tab" type="button" data-chart="p1tree">P1Tree</button></div>
+      <div class="chart-tabs" role="tablist"><button class="chart-tab" type="button" data-chart="drop">Drop and Freeze</button><button class="chart-tab" type="button" data-chart="help">Help by Scouts</button><button class="chart-tab" type="button" data-chart="p1tree">P1Tree</button><button class="chart-tab" type="button" data-chart="rooted_async">RootedAsync</button></div>
       <div class="zoom-controls">
         <button id="zoomOut" class="icon-button" type="button" aria-label="Zoom out">−</button>
         <output id="zoomLevel" class="zoom-level">100%</output>
@@ -199,6 +199,67 @@
 </svg>
 </div></div>
 </section>
+<section class="chart-panel hidden" id="panel-rooted_async" data-crate="ccm-algorithms">
+<p class="chart-blurb">The same DFS run agent by agent. A schedule activates agents one cycle at a time; in each, an agent reads only the agents at its node, writes its own memory and at most one other, and moves along at most one port. One agent leads: it settles the highest unsettled ID, sends the group out in probe batches, concludes each probe by rules R1 to R3c from what the group remembers, and decides the next edge and who vacates. Members carry out its numbered commands. The simulator checks every probe's conclusion against the truth. When nobody is unsettled the lead role passes to the scouts, who walk the tree home.</p>
+<div class="chart-frame"><div class="chart-stage"><svg class="chart" viewBox="-663 -63 1344 1230" role="img" aria-label="RootedAsync flowchart" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arrow-rooted_async" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+<g class="edges">
+<path class="edge" d="M 0.0 23.0 L 0.0 61.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M -112.0 101.2 L -319.8 161.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="-215.9" y="131.1">synchronous</text>
+<path class="edge" d="M 0.0 123.0 L 0.0 161.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="0.0" y="142.0">random</text>
+<path class="edge" d="M 112.0 101.2 L 319.8 161.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="215.9" y="131.1">interleaved</text>
+<path class="edge" d="M -319.8 207.0 L -70.2 253.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M 0.0 207.0 L 0.0 253.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M 319.8 207.0 L 70.2 253.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M 0.0 299.0 L 0.0 337.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M 0.0 399.0 L 0.0 437.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="0.0" y="418.0">lead</text>
+<path class="edge" d="M 112.0 376.7 L 341.1 437.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="226.6" y="406.8">member, idle</text>
+<path class="edge" d="M 74.9 399.0 L 341.1 529.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="208.0" y="464.0">probing</text>
+<path class="edge" d="M 74.9 399.0 L 341.1 621.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="208.0" y="510.0">errand</text>
+<path class="edge" d="M 0.0 483.0 L 0.0 521.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M -112.0 552.0 L -286.0 552.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="-199.0" y="552.0">no</text>
+<path class="edge" d="M 0.0 583.0 L 0.0 621.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="0.0" y="602.0">yes</text>
+<path class="edge" d="M 0.0 667.0 L 0.0 713.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M 0.0 759.0 L 0.0 797.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M 112.0 828.0 L 153.6 828.0 L 153.6 736.0 L 104.0 736.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="153.6" y="782.0">yes</text>
+<path class="edge" d="M 0.0 859.0 L 0.0 897.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="0.0" y="878.0">no</text>
+<path class="edge" d="M 0.0 943.0 L 0.0 989.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M 0.0 1035.0 L 0.0 1081.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M -104.0 1104.0 L -145.6 1104.0 L -145.6 460.0 L -104.0 460.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="-145.6" y="782.0">next node</text>
+<path class="edge" d="M -390.0 575.0 L -390.0 621.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M -390.0 667.0 L -390.0 705.0" marker-end="url(#arrow-rooted_async)"/>
+<path class="edge" d="M -502.0 736.0 L -543.6 736.0 L -543.6 644.0 L -494.0 644.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="-543.6" y="690.0">yes</text>
+<path class="edge" d="M -390.0 767.0 L -390.0 805.0" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="-390.0" y="786.0">no</text>
+<path class="edge aside" d="M 104.0 740.8 L 312.0 786.4" marker-end="url(#arrow-rooted_async)"/><text class="edge-label" x="208.0" y="763.6">rules</text>
+</g>
+<g class="nodes">
+<g id="rooted_async-start" class="node entry has-code" data-fn="simulate" tabindex="0" role="button"><rect x="-104" y="-23" width="208" height="46" rx="23"/><text x="0.0" y="0.0">simulate()</text></g>
+<g id="rooted_async-sched" class="node decision"><polygon points="0,61 112,92 0,123 -112,92"/><text x="0.0" y="92.0">schedule?</text></g>
+<g id="rooted_async-sync" class="node step has-code" data-fn="run_synchronous" tabindex="0" role="button"><rect x="-494" y="161" width="208" height="46" rx="9"/><text x="-390.0" y="176.0">run_synchronous():</text><text x="-390.0" y="192.0">every agent, one round</text></g>
+<g id="rooted_async-rand" class="node step has-code" data-fn="run_asynchronous" tabindex="0" role="button"><rect x="-104" y="161" width="208" height="46" rx="9"/><text x="0.0" y="176.0">run_asynchronous():</text><text x="0.0" y="192.0">one agent at a time</text></g>
+<g id="rooted_async-inter" class="node step has-code" data-fn="run_interleaved" tabindex="0" role="button"><rect x="286" y="161" width="208" height="46" rx="9"/><text x="390.0" y="176.0">run_interleaved():</text><text x="390.0" y="192.0">look now, write later</text></g>
+<g id="rooted_async-act" class="node step has-code" data-fn="activate" tabindex="0" role="button"><rect x="-104" y="253" width="208" height="46" rx="9"/><text x="0.0" y="268.0">activate():</text><text x="0.0" y="284.0">one agent, one cycle</text></g>
+<g id="rooted_async-task" class="node decision"><polygon points="0,337 112,368 0,399 -112,368"/><text x="0.0" y="368.0">lead, or task?</text></g>
+<g id="rooted_async-follow" class="node step has-code" data-fn="follow" tabindex="0" role="button"><rect x="312" y="437" width="208" height="46" rx="9"/><text x="416.0" y="452.0">follow(): carry out</text><text x="416.0" y="468.0">the newest command</text></g>
+<g id="rooted_async-probe" class="node step has-code" data-fn="probe_step" tabindex="0" role="button"><rect x="312" y="529" width="208" height="46" rx="9"/><text x="416.0" y="544.0">probe_step():</text><text x="416.0" y="560.0">one hop of R1-R3</text></g>
+<g id="rooted_async-errand" class="node step has-code" data-fn="errand_step" tabindex="0" role="button"><rect x="312" y="621" width="208" height="46" rx="9"/><text x="416.0" y="636.0">errand_step():</text><text x="416.0" y="652.0">a V2-V5 excursion</text></g>
+<g id="rooted_async-gather" class="node step has-code" data-fn="arrive" tabindex="0" role="button"><rect x="-104" y="437" width="208" height="46" rx="9"/><text x="0.0" y="452.0">arrive(): settle the</text><text x="0.0" y="468.0">highest ID, or D4</text></g>
+<g id="rooted_async-left" class="node decision"><polygon points="0,521 112,552 0,583 -112,552"/><text x="0.0" y="544.0">anyone</text><text x="0.0" y="560.0">unsettled?</text></g>
+<g id="rooted_async-plan" class="node step has-code" data-fn="plan_probe" tabindex="0" role="button"><rect x="-104" y="621" width="208" height="46" rx="9"/><text x="0.0" y="636.0">plan_probe():</text><text x="0.0" y="652.0">batches, scatter mode</text></g>
+<g id="rooted_async-batch" class="node step has-code" data-fn="finish_batch" tabindex="0" role="button"><rect x="-104" y="713" width="208" height="46" rx="9"/><text x="0.0" y="728.0">finish_batch():</text><text x="0.0" y="744.0">conclude each probe</text></g>
+<g id="rooted_async-resolve" class="node aside has-code" data-fn="resolve" tabindex="0" role="button"><rect x="312" y="768.1999999999999" width="208" height="46" rx="9"/><text x="416.0" y="791.2">resolve(): R1-R3c</text></g>
+<g id="rooted_async-more" class="node decision"><polygon points="0,797 112,828 0,859 -112,828"/><text x="0.0" y="828.0">ports left?</text></g>
+<g id="rooted_async-decide" class="node step has-code" data-fn="decide" tabindex="0" role="button"><rect x="-104" y="897" width="208" height="46" rx="9"/><text x="0.0" y="912.0">decide(): node type,</text><text x="0.0" y="928.0">next edge, who vacates</text></g>
+<g id="rooted_async-vacate" class="node step has-code" data-fn="errand_done" tabindex="0" role="button"><rect x="-104" y="989" width="208" height="46" rx="9"/><text x="0.0" y="1004.0">errand_done():</text><text x="0.0" y="1020.0">V2-V5 outcome</text></g>
+<g id="rooted_async-move" class="node step has-code" data-fn="begin_move" tabindex="0" role="button"><rect x="-104" y="1081" width="208" height="46" rx="9"/><text x="0.0" y="1096.0">begin_move(): group</text><text x="0.0" y="1112.0">leaves, lead last</text></g>
+<g id="rooted_async-begin" class="node step has-code" data-fn="begin_retrace" tabindex="0" role="button"><rect x="-494" y="529" width="208" height="46" rx="9"/><text x="-390.0" y="544.0">begin_retrace():</text><text x="-390.0" y="560.0">lead passes to a scout</text></g>
+<g id="rooted_async-rstep" class="node step has-code" data-fn="retrace_step" tabindex="0" role="button"><rect x="-494" y="621" width="208" height="46" rx="9"/><text x="-390.0" y="636.0">retrace_step():</text><text x="-390.0" y="652.0">next node home</text></g>
+<g id="rooted_async-travel" class="node decision"><polygon points="-390,705 -278,736 -390,767 -502,736"/><text x="-390.0" y="728.0">scouts still</text><text x="-390.0" y="744.0">travelling?</text></g>
+<g id="rooted_async-done" class="node terminal"><rect x="-494" y="805" width="208" height="46" rx="23"/><text x="-390.0" y="828.0">Completed</text></g>
+</g>
+</svg>
+</div></div>
+</section>
 </div>
 
       <aside id="codePane" class="code-pane" aria-live="polite">
@@ -214,7 +275,7 @@
 
   <footer>CCM Network Lab · <a href="https://github.com/drdebmath/CCMModel">source</a></footer>
 
-  <div id="codeStore" hidden><template data-code="simulate_with" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">/// Runs Drop-and-Freeze while allowing callers to provide a metrics sink and
+  <div id="codeStore" hidden><template data-chart="drop" data-code="simulate_with" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">/// Runs Drop-and-Freeze while allowing callers to provide a metrics sink and
 /// recorder.  The algorithm itself never depends on either observer.
 ///
 /// # Errors
@@ -291,7 +352,7 @@ pub fn simulate_with&lt;M: Metrics, R: Recorder&gt;(
         termination,
         trace: recorder.finish(),
     })
-}</template><template data-code="canonicalize_ports" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn canonicalize_ports(graph: &amp;PortGraph) -&gt; Result&lt;PortGraph, GraphError&gt; {
+}</template><template data-chart="drop" data-code="canonicalize_ports" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn canonicalize_ports(graph: &amp;PortGraph) -&gt; Result&lt;PortGraph, GraphError&gt; {
     let mut edges = Vec::with_capacity(graph.edge_count());
     for source_index in 0..graph.node_count() {
         let source = NodeId(u32::try_from(source_index).expect(&quot;PortGraph node IDs fit in u32&quot;));
@@ -302,7 +363,7 @@ pub fn simulate_with&lt;M: Metrics, R: Recorder&gt;(
         }
     }
     PortGraph::from_undirected_edges(graph.node_count(), &amp;edges)
-}</template><template data-code="probe_out" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn probe_out&lt;M: Metrics&gt;(graph: &amp;PortGraph, state: &amp;mut SimulationState, metrics: &amp;mut M) {
+}</template><template data-chart="drop" data-code="probe_out" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn probe_out&lt;M: Metrics&gt;(graph: &amp;PortGraph, state: &amp;mut SimulationState, metrics: &amp;mut M) {
     let (buckets, active) = occupancy(state);
     let mut moves = Vec::new();
     for node in active {
@@ -357,11 +418,11 @@ pub fn simulate_with&lt;M: Metrics, R: Recorder&gt;(
     for movement in moves {
         state.agents[movement.agent.index()].node = movement.destination;
     }
-}</template><template data-code="ordered_ports" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn ordered_ports(graph: &amp;PortGraph, node: NodeId) -&gt; Vec&lt;PortId&gt; {
+}</template><template data-chart="drop" data-code="ordered_ports" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn ordered_ports(graph: &amp;PortGraph, node: NodeId) -&gt; Vec&lt;PortId&gt; {
     let mut ports: Vec&lt;(PortId, PortEdge)&gt; = graph.ports(node).collect();
     ports.sort_by_key(|(port, edge)| (EdgeType::of(*port, edge.remote_port).priority(), port.0));
     ports.into_iter().map(|(port, _)| port).collect()
-}</template><template data-code="probe_back" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn probe_back&lt;M: Metrics&gt;(
+}</template><template data-chart="drop" data-code="probe_back" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn probe_back&lt;M: Metrics&gt;(
     graph: &amp;PortGraph,
     state: &amp;mut SimulationState,
     metrics: &amp;mut M,
@@ -392,7 +453,7 @@ pub fn simulate_with&lt;M: Metrics, R: Recorder&gt;(
         state.agents[agent.index()].node = destination;
     }
     Ok(())
-}</template><template data-code="move_out" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">#[allow(clippy::too_many_lines)]
+}</template><template data-chart="drop" data-code="move_out" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">#[allow(clippy::too_many_lines)]
 fn move_out&lt;M: Metrics&gt;(
     graph: &amp;PortGraph,
     state: &amp;mut SimulationState,
@@ -544,7 +605,7 @@ fn move_out&lt;M: Metrics&gt;(
         }
     }
     Ok(())
-}</template><template data-code="scouts_for_count" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn scouts_for_count(
+}</template><template data-chart="drop" data-code="scouts_for_count" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn scouts_for_count(
     state: &amp;SimulationState,
     node: NodeId,
     movers: &amp;[ccm_core::AgentId],
@@ -573,7 +634,7 @@ fn move_out&lt;M: Metrics&gt;(
         }
     }
     ports.len()
-}</template><template data-code="validate_state" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn validate_state(graph: &amp;PortGraph, state: &amp;SimulationState) -&gt; Result&lt;(), DropAndFreezeError&gt; {
+}</template><template data-chart="drop" data-code="validate_state" data-source="crates/ccm-algorithms/src/drop_and_freeze.rs">fn validate_state(graph: &amp;PortGraph, state: &amp;SimulationState) -&gt; Result&lt;(), DropAndFreezeError&gt; {
     if state.settled_agent_at.len() != graph.node_count()
         || state.node_status.len() != graph.node_count()
     {
@@ -638,7 +699,7 @@ fn move_out&lt;M: Metrics&gt;(
         }
     }
     Ok(())
-}</template><template data-code="run_transitions" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn run_transitions(&amp;mut self) -&gt; Result&lt;(), HelpError&gt; {
+}</template><template data-chart="help" data-code="run_transitions" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn run_transitions(&amp;mut self) -&gt; Result&lt;(), HelpError&gt; {
         self.observe();
         while self.unsettled.iter().any(|&amp;value| value) {
             self.metrics.macro_round();
@@ -710,7 +771,7 @@ fn move_out&lt;M: Metrics&gt;(
         }
         self.retrace()?;
         Ok(())
-    }</template><template data-code="settle" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn settle(&amp;mut self, agent: AgentId, node: NodeId, head: AgentId) -&gt; Result&lt;(), HelpError&gt; {
+    }</template><template data-chart="help" data-code="settle" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn settle(&amp;mut self, agent: AgentId, node: NodeId, head: AgentId) -&gt; Result&lt;(), HelpError&gt; {
         if self.home_owner[node.index()].is_some() {
             return Err(HelpError::DuplicateHome(node));
         }
@@ -743,7 +804,7 @@ fn move_out&lt;M: Metrics&gt;(
             .record_event(self.steps, SimulationEvent::AgentSettled { agent, node });
         self.observe();
         Ok(())
-    }</template><template data-code="parallel_probe" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn parallel_probe(
+    }</template><template data-chart="help" data-code="parallel_probe" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn parallel_probe(
         &amp;mut self,
         node: NodeId,
         owner: AgentId,
@@ -806,7 +867,7 @@ fn move_out&lt;M: Metrics&gt;(
             .min_by_key(|result| Self::candidate_rank(*result))
             .filter(|result| Self::candidate_rank(*result).0 != 99)
             .map(|result| result.port))
-    }</template><template data-code="candidate_rank" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn candidate_rank(result: ProbeResult) -&gt; (u8, u8, u16) {
+    }</template><template data-chart="help" data-code="candidate_rank" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn candidate_rank(result: ProbeResult) -&gt; (u8, u8, u16) {
         let node_rank = match result.node_type {
             NodeType::Unvisited =&gt; 0,
             NodeType::PartiallyVisited
@@ -817,10 +878,10 @@ fn move_out&lt;M: Metrics&gt;(
             _ =&gt; 99,
         };
         (node_rank, result.edge_type.priority(), result.port.0)
-    }</template><template data-code="edge_type" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn edge_type(&amp;self, node: NodeId, port: PortId) -&gt; Result&lt;EdgeType, HelpError&gt; {
+    }</template><template data-chart="help" data-code="edge_type" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn edge_type(&amp;self, node: NodeId, port: PortId) -&gt; Result&lt;EdgeType, HelpError&gt; {
         crate::common::edge_type_at(self.graph, node, port)
             .ok_or(HelpError::InvalidPort { node, port })
-    }</template><template data-code="update_node_type" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn update_node_type(&amp;mut self, node: NodeId, owner: AgentId) -&gt; Result&lt;(), HelpError&gt; {
+    }</template><template data-chart="help" data-code="update_node_type" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn update_node_type(&amp;mut self, node: NodeId, owner: AgentId) -&gt; Result&lt;(), HelpError&gt; {
         let empty: Vec&lt;ProbeResult&gt; = self.agents[owner.index()]
             .probe_results
             .iter()
@@ -843,7 +904,7 @@ fn move_out&lt;M: Metrics&gt;(
             self.agents[owner.index()].node_type = NodeType::Visited;
         }
         Ok(())
-    }</template><template data-code="can_vacate" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn can_vacate(&amp;mut self, node: NodeId, owner: AgentId) -&gt; Result&lt;HelpStatus, HelpError&gt; {
+    }</template><template data-chart="help" data-code="can_vacate" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn can_vacate(&amp;mut self, node: NodeId, owner: AgentId) -&gt; Result&lt;HelpStatus, HelpError&gt; {
         self.metrics.vacate();
         self.metrics.logical_rounds(RoundKind::Vacate, 2);
         self.tick(2)?;
@@ -899,7 +960,7 @@ fn move_out&lt;M: Metrics&gt;(
             self.tick(2)?;
         }
         Ok(HelpStatus::Settled)
-    }</template><template data-code="move_group" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn move_group(
+    }</template><template data-chart="help" data-code="move_group" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn move_group(
         &amp;mut self,
         ids: &amp;[AgentId],
         from: NodeId,
@@ -924,7 +985,7 @@ fn move_out&lt;M: Metrics&gt;(
             },
         );
         Ok(to)
-    }</template><template data-code="retrace" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn retrace(&amp;mut self) -&gt; Result&lt;(), HelpError&gt; {
+    }</template><template data-chart="help" data-code="retrace" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn retrace(&amp;mut self) -&gt; Result&lt;(), HelpError&gt; {
         self.metrics.retrace();
         let mut vacated = self.active_ids();
         vacated.retain(|id| self.vacated[id.index()]);
@@ -987,7 +1048,7 @@ fn move_out&lt;M: Metrics&gt;(
             return Err(HelpError::Invariant(&quot;retrace left vacated settlers&quot;));
         }
         Ok(())
-    }</template><template data-code="settle_vacated_at" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn settle_vacated_at(&amp;mut self, node: NodeId) {
+    }</template><template data-chart="help" data-code="settle_vacated_at" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn settle_vacated_at(&amp;mut self, node: NodeId) {
         if let Some(owner) = self.home_owner[node.index()] {
             if self.vacated[owner.index()] {
                 self.vacated[owner.index()] = false;
@@ -1002,7 +1063,7 @@ fn move_out&lt;M: Metrics&gt;(
                 );
             }
         }
-    }</template><template data-code="validate_final" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn validate_final(&amp;self) -&gt; Result&lt;(), HelpError&gt; {
+    }</template><template data-chart="help" data-code="validate_final" data-source="crates/ccm-algorithms/src/help_by_scouts.rs">    fn validate_final(&amp;self) -&gt; Result&lt;(), HelpError&gt; {
         let mut occupied = vec![false; self.graph.node_count()];
         for agent in &amp;self.agents {
             if agent.status != HelpStatus::Settled || agent.home != Some(agent.node) {
@@ -1014,7 +1075,7 @@ fn move_out&lt;M: Metrics&gt;(
             occupied[agent.node.index()] = true;
         }
         Ok(())
-    }</template><template data-code="settle_highest_at" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 4: &quot;the agent with the highest ID among the unsettled agents at
+    }</template><template data-chart="p1tree" data-code="settle_highest_at" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 4: &quot;the agent with the highest ID among the unsettled agents at
     /// v settles&quot;.
     fn settle_highest_at(&amp;mut self, node: NodeId) {
         let candidate = self
@@ -1036,7 +1097,7 @@ fn move_out&lt;M: Metrics&gt;(
             u32::try_from(index).expect(&quot;agent count fits the dense ID domain&quot;),
         ));
         self.metrics.settlement();
-    }</template><template data-code="traverse" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// The `while S != {}` loop of Algorithm 2, with the stack realised by the
+    }</template><template data-chart="p1tree" data-code="traverse" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// The `while S != {}` loop of Algorithm 2, with the stack realised by the
     /// parent pointers the settled agents hold.
     ///
     /// Under [`Stop::AtDispersion`], the default, the loop ends as soon as every
@@ -1111,11 +1172,11 @@ fn move_out&lt;M: Metrics&gt;(
                 }
             }
         }
-    }</template><template data-code="note_dispersion" data-source="crates/ccm-algorithms/src/p1tree.rs">    fn note_dispersion(&amp;mut self) {
+    }</template><template data-chart="p1tree" data-code="note_dispersion" data-source="crates/ccm-algorithms/src/p1tree.rs">    fn note_dispersion(&amp;mut self) {
         if self.dispersed_at_step.is_none() &amp;&amp; self.unsettled_count() == 0 {
             self.dispersed_at_step = Some(self.step);
         }
-    }</template><template data-code="retrace" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 5.1. Walks the travelling scouts home along the tree.
+    }</template><template data-chart="p1tree" data-code="retrace" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 5.1. Walks the travelling scouts home along the tree.
     ///
     /// The scouts are all standing wherever the head finished. From there the
     /// walk is a depth-first tour of the tree, one edge per step, and each
@@ -1175,7 +1236,7 @@ fn move_out&lt;M: Metrics&gt;(
                 break;
             }
         }
-    }</template><template data-code="tour" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// A depth-first tour of the tree from `start`: every node it reaches,
+    }</template><template data-chart="p1tree" data-code="tour" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// A depth-first tour of the tree from `start`: every node it reaches,
     /// including the steps back up, so consecutive entries are always
     /// neighbours.
     fn tour(start: NodeId, neighbours: &amp;[Vec&lt;NodeId&gt;]) -&gt; Vec&lt;NodeId&gt; {
@@ -1198,7 +1259,7 @@ fn move_out&lt;M: Metrics&gt;(
             }
         }
         walk
-    }</template><template data-code="neighbourhood_search" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 4.2's parallel probe: the scouts fan out over the head's ports
+    }</template><template data-chart="p1tree" data-code="neighbourhood_search" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Section 4.2's parallel probe: the scouts fan out over the head's ports
     /// together and come back reporting what they saw.
     ///
     /// Ports are handed to scouts in increasing agent-ID order. When there are
@@ -1304,7 +1365,7 @@ fn move_out&lt;M: Metrics&gt;(
                 .clone_from(&amp;results);
         }
         Ok(results)
-    }</template><template data-code="probe_party" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// The agents that travel to perform a neighbourhood search.
+    }</template><template data-chart="p1tree" data-code="probe_party" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// The agents that travel to perform a neighbourhood search.
     ///
     /// Once every agent has settled there is no travelling group left, and
     /// Section 4 has the node's own settled agent do the search. The head then
@@ -1328,7 +1389,7 @@ fn move_out&lt;M: Metrics&gt;(
         self.settled_at[self.head.index()]
             .map(|agent| vec![agent.index()])
             .unwrap_or_default()
-    }</template><template data-code="probe_detour" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// How many extra edges a scout walks past the neighbour before it can
+    }</template><template data-chart="p1tree" data-code="probe_detour" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// How many extra edges a scout walks past the neighbour before it can
     /// answer, following rules (R1)-(R3).
     ///
     /// (R1) somebody is home, so no detour. (R2) nobody is home and the scout
@@ -1346,7 +1407,7 @@ fn move_out&lt;M: Metrics&gt;(
             return 1;
         }
         2
-    }</template><template data-code="choose_next_edge" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Algorithm 2, lines 8-17: the highest-priority incident edge leading to a
+    }</template><template data-chart="p1tree" data-code="choose_next_edge" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Algorithm 2, lines 8-17: the highest-priority incident edge leading to a
     /// node the head may enter.
     ///
     /// A `PartiallyVisited` neighbour counts as empty exactly when this edge
@@ -1364,7 +1425,7 @@ fn move_out&lt;M: Metrics&gt;(
                 NodeType::Visited | NodeType::FullyVisited =&gt; false,
             })
             .copied()
-    }</template><template data-code="must_defer" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Algorithm 2, line 21: the candidate and the parent edge are both `tpq`
+    }</template><template data-chart="p1tree" data-code="must_defer" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Algorithm 2, line 21: the candidate and the parent edge are both `tpq`
     /// and this node has no port-1 incident tree edge to fall back on.
     fn must_defer(&amp;self, chosen: ProbeResult) -&gt; bool {
         if chosen.edge_type.is_port_one_incident() {
@@ -1375,7 +1436,7 @@ fn move_out&lt;M: Metrics&gt;(
             return false;
         };
         !parent_type.is_port_one_incident() &amp;&amp; !self.port_one_tree_edge[self.head.index()]
-    }</template><template data-code="awaits_port_one" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Whether this node still needs its port-1 neighbour to come and
+    }</template><template data-chart="p1tree" data-code="awaits_port_one" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Whether this node still needs its port-1 neighbour to come and
     /// reconfigure it: it was reached through a `tpq` edge and no tree edge at
     /// it carries port 1. Observation 1 guarantees such a neighbour exists.
     fn awaits_port_one(&amp;self) -&gt; bool {
@@ -1386,7 +1447,7 @@ fn move_out&lt;M: Metrics&gt;(
             return false;
         };
         !parent_type.is_port_one_incident() &amp;&amp; !self.port_one_tree_edge[self.head.index()]
-    }</template><template data-code="advance" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Algorithm 2, lines 25-27: take the edge, and settle or reconfigure at the
+    }</template><template data-chart="p1tree" data-code="advance" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Algorithm 2, lines 25-27: take the edge, and settle or reconfigure at the
     /// far end.
     fn advance(&amp;mut self, chosen: ProbeResult) -&gt; Result&lt;(), P1Error&gt; {
         let from = self.head;
@@ -1434,7 +1495,7 @@ fn move_out&lt;M: Metrics&gt;(
         self.apply_parent_vacate(target);
         self.checkpoint(Phase::Movement);
         Ok(())
-    }</template><template data-code="apply_can_vacate" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Algorithm 3, `Can_Vacate()`. Decides whether the agent settled at `node`
+    }</template><template data-chart="p1tree" data-code="apply_can_vacate" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Algorithm 3, `Can_Vacate()`. Decides whether the agent settled at `node`
     /// may leave and travel with the head as a scout.
     ///
     /// The point of vacating is supply: a node only ever holds one settled
@@ -1486,7 +1547,7 @@ fn move_out&lt;M: Metrics&gt;(
             }
             _ =&gt; {}
         }
-    }</template><template data-code="apply_parent_vacate" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// (V5) Algorithm 3, lines 15-25. When this node's port at the parent is
+    }</template><template data-chart="p1tree" data-code="apply_parent_vacate" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// (V5) Algorithm 3, lines 15-25. When this node's port at the parent is
     /// port 1, the parent may vacate instead, provided nothing already leans on
     /// it.
     fn apply_parent_vacate(&amp;mut self, node: NodeId) {
@@ -1516,7 +1577,7 @@ fn move_out&lt;M: Metrics&gt;(
         self.metrics.vacate();
         self.join_group(parent_owner);
         self.agents[owner.index()].vacated_neighbor = true;
-    }</template><template data-code="backtrack" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Moves the DFS head to the parent of the current node. Returns false when
+    }</template><template data-chart="p1tree" data-code="backtrack" data-source="crates/ccm-algorithms/src/p1tree.rs">    /// Moves the DFS head to the parent of the current node. Returns false when
     /// the root is popped, which empties the stack and ends the traversal.
     fn backtrack(&amp;mut self) -&gt; Result&lt;bool, P1Error&gt; {
         let Some((parent, port, _)) = self.parent[self.head.index()] else {
@@ -1537,7 +1598,860 @@ fn move_out&lt;M: Metrics&gt;(
         self.head = parent;
         self.checkpoint(Phase::Movement);
         Ok(true)
-    }</template></div>
+    }</template><template data-chart="rooted_async" data-code="simulate" data-source="crates/ccm-algorithms/src/rooted_async/mod.rs">/// Runs `RootedAsync` from a rooted placement under `schedule`, stopping after
+/// `epoch_limit` epochs.
+///
+/// # Errors
+///
+/// Rejects an empty graph, more agents than nodes, a start outside the graph,
+/// and a placement that is not rooted. Also returns an error whenever a
+/// decision made from the local view is caught out by the simulator's check.
+pub fn simulate&lt;M: Metrics, R: Recorder&gt;(
+    graph: &amp;PortGraph,
+    starts: &amp;[NodeId],
+    schedule: Schedule,
+    epoch_limit: u64,
+    metrics: M,
+    recorder: R,
+) -&gt; Result&lt;(RootedAsyncResult, M, R), RootedAsyncError&gt; {
+    if graph.node_count() == 0 {
+        return Err(RootedAsyncError::EmptyGraph);
+    }
+    let Some(&amp;root) = starts.first() else {
+        return Err(RootedAsyncError::NonRootedStart);
+    };
+    if starts.len() &gt; graph.node_count() {
+        return Err(RootedAsyncError::TooManyAgents {
+            agents: starts.len(),
+            nodes: graph.node_count(),
+        });
+    }
+    if let Some(&amp;bad) = starts.iter().find(|n| n.index() &gt;= graph.node_count()) {
+        return Err(RootedAsyncError::InvalidStart(bad));
+    }
+    if starts.iter().any(|&amp;node| node != root) {
+        return Err(RootedAsyncError::NonRootedStart);
+    }
+    run::Run::new(graph, root, starts.len(), metrics, recorder).run(schedule, epoch_limit)
+}</template><template data-chart="rooted_async" data-code="run_synchronous" data-source="crates/ccm-algorithms/src/rooted_async/run.rs">    /// Every agent completes one cycle per round, all reading the state the
+    /// round began with: the paper's SYNC model, in which a round is an epoch.
+    fn run_synchronous(&amp;mut self, limit: u64) -&gt; Result&lt;Termination, RootedAsyncError&gt; {
+        let count = self.world.agents.len();
+        loop {
+            if self.finished() {
+                return Ok(Termination::Completed);
+            }
+            if self.epoch &gt;= limit {
+                return Ok(Termination::RoundLimitReached { limit });
+            }
+            self.changed = false;
+            for index in 0..count {
+                self.changed |= self.world.land(agent(index));
+                self.refresh(agent(index));
+            }
+            let actions: Vec&lt;Action&gt; = (0..count)
+                .map(|index| activate(&amp;self.world, agent(index)))
+                .collect();
+            self.activations += count as u64;
+            self.apply_round(actions)?;
+            self.end_epoch()?;
+        }
+    }</template><template data-chart="rooted_async" data-code="run_asynchronous" data-source="crates/ccm-algorithms/src/rooted_async/run.rs">    /// One agent at a time, in an order the schedule picks: the paper's ASYNC
+    /// model with atomic cycles. A move ends the cycle only on arrival, so a
+    /// scout can be held on an edge, seen at neither end, for as long as the
+    /// schedule leaves it there.
+    fn run_asynchronous(
+        &amp;mut self,
+        limit: u64,
+        seed: u64,
+        starved: Option&lt;(AgentId, u32)&gt;,
+    ) -&gt; Result&lt;Termination, RootedAsyncError&gt; {
+        let count = self.world.agents.len();
+        let mut rng = DeterministicRng::new(seed);
+        let mut completed = vec![false; count];
+        let mut remaining = count;
+        let mut step = 0_u64;
+        loop {
+            if self.finished() {
+                return Ok(Termination::Completed);
+            }
+            if self.epoch &gt;= limit {
+                return Ok(Termination::RoundLimitReached { limit });
+            }
+            step += 1;
+            let id = match starved {
+                Some((slow, period)) if step % u64::from(period) == 0 || count == 1 =&gt; slow,
+                Some((slow, _)) =&gt; {
+                    let pick = rng.index(count - 1).expect(&quot;count &gt; 1&quot;);
+                    agent(if pick &gt;= slow.index() { pick + 1 } else { pick })
+                }
+                None =&gt; agent(rng.index(count).expect(&quot;at least one agent&quot;)),
+            };
+            self.activations += 1;
+            let finished_cycle = if self.world.land(id) {
+                self.changed = true;
+                self.refresh(id);
+                true
+            } else {
+                let action = activate(&amp;self.world, id);
+                let moving = action.depart.is_some();
+                self.apply(id, action, false)?;
+                !moving
+            };
+            if finished_cycle &amp;&amp; !completed[id.index()] {
+                completed[id.index()] = true;
+                remaining -= 1;
+            }
+            if remaining == 0 {
+                self.end_epoch()?;
+                completed.fill(false);
+                remaining = count;
+                self.changed = false;
+            }
+        }
+    }</template><template data-chart="rooted_async" data-code="run_interleaved" data-source="crates/ccm-algorithms/src/rooted_async/run.rs">    /// The paper's ASYNC with each cycle split into a look and a later commit;
+    /// see [`Schedule::Interleaved`]. A cycle with a move completes on arrival,
+    /// as under `Random`.
+    fn run_interleaved(&amp;mut self, limit: u64, seed: u64) -&gt; Result&lt;Termination, RootedAsyncError&gt; {
+        let count = self.world.agents.len();
+        let mut rng = DeterministicRng::new(seed);
+        let mut pending: Vec&lt;Option&lt;Pending&gt;&gt; = (0..count).map(|_| None).collect();
+        let mut completed = vec![false; count];
+        let mut remaining = count;
+        // An epoch with no change only proves a deadlock if the one before it
+        // had none either: a cycle completing in the first may have looked at
+        // a state that has since changed.
+        let mut quiet_epochs = 0;
+        loop {
+            if self.finished() {
+                return Ok(Termination::Completed);
+            }
+            if self.epoch &gt;= limit {
+                return Ok(Termination::RoundLimitReached { limit });
+            }
+            let id = agent(rng.index(count).expect(&quot;at least one agent&quot;));
+            self.activations += 1;
+            let finished_cycle = if self.world.land(id) {
+                self.changed = true;
+                self.refresh(id);
+                true
+            } else if let Some(look) = pending[id.index()].take() {
+                let moving = look.action.depart.is_some();
+                self.commit(id, look)?;
+                !moving
+            } else {
+                let action = activate(&amp;self.world, id);
+                let seen_other = action
+                    .other
+                    .as_ref()
+                    .map(|other| self.world.memory(other.id).clone());
+                let node = self.world.agents[id.index()].position.node();
+                pending[id.index()] = Some(Pending {
+                    seen_own: self.world.memory(id).clone(),
+                    seen_other,
+                    seen_version: self.world.version[node.index()],
+                    action,
+                });
+                false
+            };
+            if finished_cycle &amp;&amp; !completed[id.index()] {
+                completed[id.index()] = true;
+                remaining -= 1;
+            }
+            if remaining == 0 {
+                quiet_epochs = if self.changed { 0 } else { quiet_epochs + 1 };
+                self.end_epoch_after(quiet_epochs &gt;= 2)?;
+                completed.fill(false);
+                remaining = count;
+                self.changed = false;
+            }
+        }
+    }</template><template data-chart="rooted_async" data-code="activate" data-source="crates/ccm-algorithms/src/rooted_async/agent.rs">pub(super) fn activate(world: &amp;World&lt;'_&gt;, id: AgentId) -&gt; Action {
+    let mut cx = Cx::new(world, id);
+    match cx.me.task {
+        Task::Idle =&gt; {
+            if let Some(state) = cx.me.lead.take() {
+                cx.me.lead = lead::act(&amp;mut cx, state);
+            } else if cx.me.in_group() {
+                follow(&amp;mut cx);
+            }
+        }
+        Task::Probe { port, hop } =&gt; probe_step(&amp;mut cx, port, hop),
+        Task::Return { remaining } =&gt; {
+            let port = cx.me.scout.back[usize::from(remaining) - 1];
+            cx.me.task = if remaining == 1 {
+                Task::Idle
+            } else {
+                Task::Return {
+                    remaining: remaining - 1,
+                }
+            };
+            cx.note(Note::ProbeBack);
+            cx.leave(port);
+        }
+        Task::Errand { rule, stage, seq } =&gt; errand_step(&amp;mut cx, rule, stage, seq),
+        Task::ErrandBack { remaining, seq } =&gt; errand_back(&amp;mut cx, remaining, seq),
+        Task::Join { port } =&gt; {
+            cx.me.task = Task::Idle;
+            cx.leave(port);
+        }
+        Task::Scatter { port, parent } =&gt; {
+            cx.me.task = Task::ScatterArrive {
+                parent,
+                port_at_parent: port,
+            };
+            cx.leave(port);
+        }
+        Task::ScatterArrive {
+            parent,
+            port_at_parent,
+        } =&gt; {
+            cx.me.state = AgentState::Settled;
+            cx.me.parent = Some((parent, port_at_parent));
+            cx.me.parent_port = cx.me.arrival_port;
+            cx.me.node_type = crate::common::NodeType::FullyVisited;
+            cx.me.task = Task::Idle;
+        }
+    }
+    cx.finish()
+}</template><template data-chart="rooted_async" data-code="follow" data-source="crates/ccm-algorithms/src/rooted_async/agent.rs">/// A group member waiting at the head: carry out the lead's newest command.
+fn follow(cx: &amp;mut Cx&lt;'_, '_&gt;) {
+    let Some(lead) = cx.lead_here() else {
+        return;
+    };
+    if lead.seq &lt;= cx.me.seen_seq {
+        return;
+    }
+    cx.me.seen_seq = lead.seq;
+    match lead.command {
+        Command::None =&gt; {}
+        Command::Rank =&gt; rank(cx),
+        Command::Probe { first } =&gt; {
+            let index = first + cx.me.rank;
+            if index &lt; lead.probe_limit {
+                let port = nth_port(index, lead.skip_port);
+                start_probe(cx, port, lead.seq);
+            }
+        }
+        Command::Collect { probe_seq } =&gt; {
+            let pool = cx.group_here();
+            tally(&amp;mut cx.me, &amp;pool, probe_seq);
+        }
+        Command::Move { port } =&gt; cx.leave(port),
+        Command::Scatter =&gt; {
+            if cx.me.state == AgentState::Unsettled {
+                if let (Some(port), Some(parent)) = (cx.me.scatter.port, lead.head_owner) {
+                    cx.me.task = Task::Scatter { port, parent };
+                }
+            }
+        }
+    }
+}</template><template data-chart="rooted_async" data-code="probe_step" data-source="crates/ccm-algorithms/src/rooted_async/agent.rs">/// One hop of a probe walk, (R1)-(R3c). Each hop is decided at the node the
+/// scout has just reached, from who is standing there and the arrival port.
+fn probe_step(cx: &amp;mut Cx&lt;'_, '_&gt;, port: PortId, hop: u8) {
+    let arrival = cx
+        .me
+        .arrival_port
+        .expect(&quot;a probing scout arrived somewhere&quot;);
+    let here = cx.settled_here().map(|m| (m.id, m.node_type));
+    cx.me.scout.back[usize::from(hop) - 1] = arrival;
+    let reached = match hop {
+        1 =&gt; {
+            cx.me.scout.edge_type = EdgeType::of(port, arrival);
+            if let Some(found) = here {
+                cx.me.scout.found = Some(found);
+                Some(Reached::R1)
+            } else {
+                // Rule (R2) concludes &quot;empty&quot; here when the scout arrived on
+                // port 1. But then the head is y's port-1 neighbour, and (V2)
+                // vacates y precisely when that neighbour is occupied: a
+                // vacated child of the head would be taken for an empty node.
+                // So continue as (R3) with z the head, which costs nothing,
+                // since going to z is going home.
+                cx.me.scout.via_head = arrival == PORT_ONE;
+                None
+            }
+        }
+        2 =&gt; {
+            cx.me.scout.p1 = here.map(|(id, _)| id);
+            cx.me.scout.port_at_p1 = arrival;
+            if here.is_some() {
+                Some(Reached::R3a)
+            } else if arrival == PORT_ONE {
+                Some(Reached::R3b)
+            } else {
+                None
+            }
+        }
+        _ =&gt; {
+            cx.me.scout.p1p1 = here.map(|(id, _)| id);
+            cx.me.scout.port_at_p1p1 = arrival;
+            Some(Reached::R3c)
+        }
+    };
+    if let Some(reached) = reached {
+        // Algorithm 4 has R3c-i set its result without returning; every
+        // scout returns.
+        cx.me.scout.reached = reached;
+        let moves = if cx.me.scout.via_head { hop - 2 } else { hop };
+        if moves == 0 {
+            cx.me.task = Task::Idle;
+            return;
+        }
+        cx.me.task = if moves == 1 {
+            Task::Idle
+        } else {
+            Task::Return {
+                remaining: moves - 1,
+            }
+        };
+        cx.note(Note::ProbeBack);
+        cx.leave(cx.me.scout.back[usize::from(hop) - 1]);
+    } else {
+        cx.me.task = Task::Probe { port, hop: hop + 1 };
+        cx.note(Note::ProbeOut);
+        cx.leave(PORT_ONE);
+    }
+}</template><template data-chart="rooted_async" data-code="errand_step" data-source="crates/ccm-algorithms/src/rooted_async/agent.rs">/// Algorithm 3's excursions: the settled agent at the head walks along
+/// port-1 links, looks, writes into the agent it finds, and walks back.
+///
+/// Rules (R1)-(R3c) can only recognise a vacated node whose port-1 neighbour,
+/// or that neighbour's port-1 neighbour, is occupied, and only for as long as
+/// that node stays occupied. The paper checks this for (V2) alone: (V3) and
+/// (V4) vacate unconditionally, and nothing stops an occupied node that others
+/// rely on from vacating later. So (V2), (V3) and (V4) all walk the chain here,
+/// and the occupied node they rely on is marked with `vacated_neighbor`, which
+/// then keeps it from vacating under any rule.
+fn errand_step(cx: &amp;mut Cx&lt;'_, '_&gt;, rule: VacateRule, stage: u8, seq: u32) {
+    let here = cx
+        .settled_here()
+        .map(|m| (m.id, m.parent_port, m.vacated_neighbor));
+    let arrival = cx.me.arrival_port;
+    let next = |stage| Task::Errand { rule, stage, seq };
+    match (rule, stage) {
+        (VacateRule::V5, 0) =&gt; {
+            cx.me.task = next(1);
+            cx.leave(cx.me.parent_port.expect(&quot;V5 needs a parent&quot;));
+        }
+        (_, 0) =&gt; {
+            cx.me.task = next(1);
+            cx.leave(PORT_ONE);
+        }
+        (VacateRule::V5, _) =&gt; {
+            let arrival = arrival.expect(&quot;the errand arrived&quot;);
+            cx.me.scout.back[0] = arrival;
+            let me = cx.me.id;
+            let parent_port = cx.me.parent_port;
+            cx.me.errand = Some(match here {
+                // (V5): the parent goes instead. Its port 1 leads here, so this
+                // node is its port-1 neighbour, which Algorithm 3 forgets to
+                // record and rule (R3a) needs.
+                Some((z, Some(_), false)) =&gt; {
+                    let parent = cx.write(z);
+                    parent.state = AgentState::SettledScout;
+                    parent.p1_neighbor = Some(me);
+                    parent.port_at_p1_neighbor = parent_port;
+                    parent.task = Task::Join { port: arrival };
+                    parent.seen_seq = seq;
+                    cx.me.vacated_neighbor = true;
+                    ErrandResult::Joined
+                }
+                _ =&gt; ErrandResult::NotJoined,
+            });
+            go_back(cx, 1, seq);
+        }
+        (_, 1) =&gt; {
+            let arrival = arrival.expect(&quot;the errand arrived&quot;);
+            cx.me.scout.back[0] = arrival;
+            if let Some((w, _, _)) = here {
+                cx.write(w).vacated_neighbor = true;
+                cx.me.errand = Some(ErrandResult::Anchored {
+                    p1: w,
+                    port_at_p1: arrival,
+                });
+                go_back(cx, 1, seq);
+            } else if rule == VacateRule::V2 || arrival == PORT_ONE {
+                // (V2) asks for an occupied port-1 neighbour, nothing further.
+                // Otherwise a second hop is allowed, unless it would lead
+                // straight back to this node.
+                cx.me.errand = Some(ErrandResult::Refused);
+                go_back(cx, 1, seq);
+            } else {
+                cx.me.task = next(2);
+                cx.leave(PORT_ONE);
+            }
+        }
+        _ =&gt; {
+            let arrival = arrival.expect(&quot;the errand arrived&quot;);
+            cx.me.scout.back[1] = arrival;
+            cx.me.errand = Some(match here {
+                Some((u, _, _)) =&gt; {
+                    cx.write(u).vacated_neighbor = true;
+                    ErrandResult::TwoHops {
+                        anchor: u,
+                        port_at_anchor: arrival,
+                        port_at_p1: cx.me.scout.back[0],
+                    }
+                }
+                None =&gt; ErrandResult::Refused,
+            });
+            go_back(cx, 2, seq);
+        }
+    }
+}</template><template data-chart="rooted_async" data-code="arrive" data-source="crates/ccm-algorithms/src/rooted_async/lead.rs">/// Algorithm 5 lines 11-19: settle at a new node, or reattach a
+/// partiallyVisited one, or simply resume at a node reached by backtracking.
+fn arrive(cx: &amp;mut Cx&lt;'_, '_&gt;, mut lead: Lead) -&gt; Option&lt;Lead&gt; {
+    let arrival = cx.me.arrival_port;
+    let parent_link: Option&lt;Link&gt; = lead.prev_id.zip(lead.child_port);
+    let edge = arrival
+        .zip(lead.child_port)
+        .map(|(here, there)| EdgeType::of(here, there));
+    match lead.target {
+        Target::Empty =&gt; {
+            // Line 12: the highest-ID unsettled agent settles.
+            let settler = cx
+                .group_here()
+                .into_iter()
+                .filter(|m| m.state == AgentState::Unsettled)
+                .map(|m| m.id)
+                .max()
+                .expect(&quot;the lead itself is unsettled&quot;);
+            let sibling = lead.sibling_details.take();
+            let settle = |m: &amp;mut Memory| {
+                m.state = AgentState::Settled;
+                m.node_type = NodeType::Visited;
+                m.parent = parent_link;
+                m.parent_port = arrival;
+                m.parent_edge_type = edge;
+                m.port_one_tree_edge = edge.is_some_and(EdgeType::is_port_one_incident);
+                // Line 25 sets `sibling` on every pass, which on a backtrack
+                // overwrites it with nothing; it is set once, here.
+                m.sibling = sibling;
+            };
+            if settler == cx.me.id {
+                settle(&amp;mut cx.me);
+            } else {
+                settle(cx.write(settler));
+            }
+            lead.child_port = None;
+            lead.head_owner = Some(settler);
+            lead.unsettled -= 1;
+            lead.group_size -= 1;
+            if lead.unsettled == 0 {
+                return begin_retrace(cx, lead);
+            }
+        }
+        Target::Owner { id, forward } =&gt; {
+            lead.head_owner = Some(id);
+            cx.note(Note::HeadOwner(id));
+            if forward {
+                // Rule (D4): a partiallyVisited node reached through its port 1
+                // swaps its tpq parent edge for this one.
+                let sibling = lead.sibling_details.take();
+                let owner = cx.write(id);
+                owner.old_parent = owner.parent;
+                owner.old_parent_port = owner.parent_port;
+                owner.old_sibling = owner.sibling;
+                owner.parent = parent_link;
+                owner.parent_port = arrival;
+                owner.parent_edge_type = edge;
+                owner.port_one_tree_edge = true;
+                owner.node_type = NodeType::Visited;
+                owner.sibling = sibling;
+                lead.child_port = None;
+            }
+        }
+    }
+    issue(cx, &amp;mut lead, Command::Rank);
+    rank(cx);
+    lead.phase = Phase::Rank;
+    Some(lead)
+}</template><template data-chart="rooted_async" data-code="plan_probe" data-source="crates/ccm-algorithms/src/rooted_async/lead.rs">/// Fixes which ports to probe. A node of degree at least `k - 1` takes
+/// Algorithm 5's shortcut (lines 21-24): probe enough ports to find an empty
+/// neighbour for every unsettled agent, and scatter them there.
+fn plan_probe(cx: &amp;mut Cx&lt;'_, '_&gt;, lead: &amp;mut Lead) {
+    let owner = owner_memory(cx, lead);
+    let degree = cx.degree();
+    let skip = owner.parent_port;
+    let candidates = degree - u16::from(skip.is_some());
+    lead.skip_port = skip;
+    lead.best = None;
+    lead.batches_here = 0;
+    lead.batch = u16::try_from(lead.group_size).expect(&quot;the group fits the port domain&quot;);
+    lead.scatter_mode = u32::from(degree) + 1 &gt;= lead.k;
+    lead.probe_limit = if lead.scatter_mode {
+        // At most this many neighbours can be occupied, so this many ports
+        // hold an empty one for each unsettled agent.
+        let enough = if skip.is_none() {
+            lead.k - 1
+        } else {
+            lead.k - 2
+        };
+        candidates.min(u16::try_from(enough).unwrap_or(u16::MAX))
+    } else {
+        candidates
+    };
+    next_batch_or_decide(cx, lead, 0);
+}</template><template data-chart="rooted_async" data-code="finish_batch" data-source="crates/ccm-algorithms/src/rooted_async/lead.rs">/// Every scout of a batch is back: conclude each probe from what the group
+/// holds (Algorithm 4 lines 25-50) and keep the best edge so far.
+fn finish_batch(cx: &amp;mut Cx&lt;'_, '_&gt;, lead: &amp;mut Lead, first: u16) {
+    let pool = cx.group_here();
+    let claimants = Claimants::new(&amp;pool);
+    let probe_seq = lead.seq;
+    for scout in pool.iter().filter(|m| m.scout.seq == probe_seq) {
+        let resolution = resolve(&amp;scout.scout, &amp;claimants);
+        cx.note(Note::Probed {
+            head: cx.node,
+            resolution,
+        });
+        let eligible = match resolution.node_type {
+            NodeType::Unvisited =&gt; resolution.owner.is_none(),
+            // Rule (D4): enterable through its port 1 only.
+            NodeType::PartiallyVisited =&gt; {
+                matches!(scout.scout.edge_type, EdgeType::OtherOne | EdgeType::OneOne)
+            }
+            NodeType::Visited | NodeType::FullyVisited =&gt; false,
+        };
+        let candidate = Candidate {
+            port: resolution.port,
+            edge_type: scout.scout.edge_type,
+            owner: resolution.owner,
+        };
+        let rank = |c: &amp;Candidate| (c.edge_type.priority(), c.port.0);
+        if eligible
+            &amp;&amp; lead
+                .best
+                .map_or(true, |best| rank(&amp;candidate) &lt; rank(&amp;best))
+        {
+            lead.best = Some(candidate);
+        }
+    }
+    if lead.scatter_mode {
+        issue(cx, lead, Command::Collect { probe_seq });
+        tally(&amp;mut cx.me, &amp;pool, probe_seq);
+        lead.phase = Phase::Collect { first };
+    } else {
+        next_batch_or_decide(cx, lead, first + lead.batch);
+    }
+}</template><template data-chart="rooted_async" data-code="resolve" data-source="crates/ccm-algorithms/src/rooted_async/probe.rs">/// Concludes one probe at the head, after every scout is back.
+///
+/// `claimants` indexes the group as it stands at the head. A vacated node's
+/// agent is in it, so a vacated node is recognised by finding the group member
+/// whose stored port-1 neighbour is the one the scout saw.
+pub(super) fn resolve(scout: &amp;ScoutRecord, claimants: &amp;Claimants&lt;'_&gt;) -&gt; Resolution {
+    let claimant = |p1: AgentId, port: PortId| claimants.find(p1, port);
+    let empty = |rule| Resolution {
+        port: scout.port,
+        owner: None,
+        node_type: NodeType::Unvisited,
+        rule,
+    };
+    let vacated = |member: &amp;Memory, rule| Resolution {
+        port: scout.port,
+        owner: Some(member.id),
+        node_type: member.node_type,
+        rule,
+    };
+
+    match scout.reached {
+        Reached::R1 =&gt; {
+            let (owner, node_type) = scout.found.expect(&quot;R1 records who was home&quot;);
+            Resolution {
+                port: scout.port,
+                owner: Some(owner),
+                node_type,
+                rule: ProbeRule::R1,
+            }
+        }
+        Reached::R3b =&gt; empty(ProbeRule::R3b),
+        Reached::R3a =&gt; {
+            let z = scout.p1.expect(&quot;R3a records who was at z&quot;);
+            claimant(z, scout.port_at_p1)
+                .map_or_else(|| empty(ProbeRule::R3aII), |b| vacated(b, ProbeRule::R3aI))
+        }
+        Reached::R3c =&gt; {
+            let Some(w) = scout.p1p1 else {
+                return empty(ProbeRule::R3cI);
+            };
+            // c = psi(z), recognised by its own port-1 neighbour w; then
+            // b = psi(y), recognised by having c as its port-1 neighbour.
+            claimant(w, scout.port_at_p1p1)
+                .and_then(|c| claimant(c.id, scout.port_at_p1))
+                .map_or_else(
+                    || empty(ProbeRule::R3cIIBeta),
+                    |b| vacated(b, ProbeRule::R3cIIAlpha),
+                )
+        }
+    }
+}</template><template data-chart="rooted_async" data-code="decide" data-source="crates/ccm-algorithms/src/rooted_async/lead.rs">/// Algorithm 2 lines 18-30 and Algorithm 3: classify the head, choose the next
+/// edge, and decide whether its agent vacates.
+fn decide(cx: &amp;mut Cx&lt;'_, '_&gt;, lead: &amp;mut Lead) {
+    cx.note(Note::MacroRound);
+    let owner_id = lead.head_owner.expect(&quot;the head has an owner&quot;);
+    let mut owner = owner_memory(cx, lead);
+
+    // Line 21, and Claim 3 for a dead end: a node with only a tpq parent edge
+    // and no port-1 tree edge waits for its port-1 neighbour.
+    let waiting = owner
+        .parent_edge_type
+        .is_some_and(|t| !t.is_port_one_incident())
+        &amp;&amp; !owner.port_one_tree_edge;
+    let (node_type, plan) = match lead.best {
+        Some(c) if waiting &amp;&amp; !c.edge_type.is_port_one_incident() =&gt; {
+            (NodeType::PartiallyVisited, Plan::Back)
+        }
+        Some(c) =&gt; (NodeType::Visited, Plan::Forward(c)),
+        None if waiting =&gt; (NodeType::PartiallyVisited, Plan::Back),
+        None =&gt; (NodeType::FullyVisited, Plan::Back),
+    };
+    if plan == Plan::Back &amp;&amp; owner.parent.is_none() {
+        cx.note(Note::Stuck(
+            &quot;the root ran out of edges with agents unsettled&quot;,
+        ));
+        return;
+    }
+    owner.node_type = node_type;
+    lead.plan = plan;
+
+    // Algorithm 3, read with the prose of Section 4.1. As printed, its
+    // `visited` branch always returns, so rule (V5) could never fire for the
+    // child Lemma 3 applies it to; here V5 is tried whenever this node stays.
+    // A node others rely on (`vacated_neighbor`) never vacates; see
+    // `agent::errand_step` for why that has to cover every rule.
+    let own_rule = match node_type {
+        _ if owner.state != AgentState::Settled || owner.parent_port.is_none() =&gt; None,
+        _ if owner.vacated_neighbor =&gt; None,
+        NodeType::Visited =&gt; Some(VacateRule::V2),
+        NodeType::FullyVisited =&gt; Some(VacateRule::V3),
+        NodeType::PartiallyVisited =&gt; Some(VacateRule::V4),
+        NodeType::Unvisited =&gt; None,
+    };
+    let rule = own_rule.or_else(|| v5_applies(&amp;owner).then_some(VacateRule::V5));
+    if let Some(rule) = rule {
+        start_errand(&amp;mut owner, lead, rule);
+    } else {
+        lead.phase = Phase::PreMove;
+    }
+    write_owner(cx, owner_id, owner);
+}</template><template data-chart="rooted_async" data-code="errand_done" data-source="crates/ccm-algorithms/src/rooted_async/lead.rs">fn errand_done(cx: &amp;mut Cx&lt;'_, '_&gt;, lead: &amp;mut Lead, rule: VacateRule) {
+    let owner_id = lead.head_owner.expect(&quot;the head has an owner&quot;);
+    let Some(owner) = cx.find(owner_id) else {
+        return; // still out
+    };
+    let (Task::Idle, Some(result)) = (owner.task, owner.errand) else {
+        return;
+    };
+    let mut owner = owner.clone();
+    let vacated = match result {
+        ErrandResult::Anchored { .. } | ErrandResult::Joined =&gt; true,
+        ErrandResult::TwoHops {
+            anchor,
+            port_at_anchor,
+            port_at_p1,
+        } =&gt; {
+            // The middle node is vacated, not empty, exactly when its agent is
+            // in the group and names the anchor as its own port-1 neighbour:
+            // the test rule (R3c) will apply to it.
+            let middle = cx.group_here().into_iter().find(|m| {
+                m.state == AgentState::SettledScout
+                    &amp;&amp; m.p1_neighbor == Some(anchor)
+                    &amp;&amp; m.port_at_p1_neighbor == Some(port_at_anchor)
+            });
+            if let Some(middle) = middle {
+                owner.state = AgentState::SettledScout;
+                owner.p1_neighbor = Some(middle.id);
+                owner.port_at_p1_neighbor = Some(port_at_p1);
+                owner.seen_seq = lead.seq;
+                cx.note(Note::Vacate);
+                true
+            } else {
+                false
+            }
+        }
+        ErrandResult::Refused | ErrandResult::NotJoined =&gt; false,
+    };
+    owner.errand = None;
+    if vacated {
+        lead.group_size += 1;
+        lead.phase = Phase::PreMove;
+    } else if rule != VacateRule::V5 &amp;&amp; v5_applies(&amp;owner) {
+        start_errand(&amp;mut owner, lead, VacateRule::V5);
+    } else {
+        lead.phase = Phase::PreMove;
+    }
+    write_owner(cx, owner_id, owner);
+}</template><template data-chart="rooted_async" data-code="begin_move" data-source="crates/ccm-algorithms/src/rooted_async/lead.rs">/// Algorithm 5 lines 32-46: record the move at the head's agent and send the
+/// group on.
+fn begin_move(cx: &amp;mut Cx&lt;'_, '_&gt;, lead: &amp;mut Lead) {
+    let owner_id = lead.head_owner.expect(&quot;the head has an owner&quot;);
+    let mut owner = owner_memory(cx, lead);
+    let port = match lead.plan {
+        Plan::Forward(c) =&gt; {
+            owner.recent_port = Some(c.port);
+            if owner.recent_child.is_some() {
+                lead.sibling_details = lead.child_details.take();
+            }
+            owner.recent_child = Some(c.port);
+            if c.edge_type.is_port_one_incident() {
+                owner.port_one_tree_edge = true;
+            }
+            lead.child_port = Some(c.port);
+            lead.target = c
+                .owner
+                .map_or(Target::Empty, |id| Target::Owner { id, forward: true });
+            c.port
+        }
+        Plan::Back =&gt; {
+            let (parent, port_at_parent) = owner.parent.expect(&quot;checked in decide&quot;);
+            lead.child_details = Some((owner_id, port_at_parent));
+            lead.child_sibling = owner.sibling;
+            lead.child_port = None;
+            owner.recent_port = owner.parent_port;
+            lead.target = Target::Owner {
+                id: parent,
+                forward: false,
+            };
+            cx.note(Note::Backtrack);
+            owner
+                .parent_port
+                .expect(&quot;a non-root node has a parent port&quot;)
+        }
+    };
+    lead.prev_id = Some(owner_id);
+    write_owner(cx, owner_id, owner);
+    cx.note(Note::GroupMove(lead.group_size as usize));
+    cx.note(Note::Step {
+        forward: matches!(lead.plan, Plan::Forward(_)),
+        batches: lead.batches_here,
+        scouts: lead.batch,
+    });
+    issue(cx, lead, Command::Move { port });
+    lead.phase = Phase::Depart;
+}</template><template data-chart="rooted_async" data-code="begin_retrace" data-source="crates/ccm-algorithms/src/rooted_async/lead.rs">/// Construction is over. Retrace starts where the group stands.
+fn begin_retrace(cx: &amp;mut Cx&lt;'_, '_&gt;, lead: Lead) -&gt; Option&lt;Lead&gt; {
+    cx.note(Note::Constructed);
+    if lead.group_size &gt; 0 {
+        let owner = lead.head_owner;
+        hand_over(cx, lead, owner);
+    }
+    None
+}</template><template data-chart="rooted_async" data-code="retrace_step" data-source="crates/ccm-algorithms/src/rooted_async/lead.rs">/// Algorithm 6 at one node: drop off whichever vacated agent lives here, then
+/// pick the next node of the post-order walk.
+fn retrace_step(cx: &amp;mut Cx&lt;'_, '_&gt;, mut lead: Lead) -&gt; Option&lt;Lead&gt; {
+    let arrival = cx.me.arrival_port;
+    let owner_id = if let Some(settled) = cx.settled_here() {
+        settled.id
+    } else {
+        let Some(next) = lead.next_agent_id else {
+            cx.note(Note::Stuck(
+                &quot;retrace reached an empty node with no one expected&quot;,
+            ));
+            return Some(lead);
+        };
+        let Some(found) = cx
+            .find(next)
+            .filter(|m| m.state == AgentState::SettledScout)
+        else {
+            cx.note(Note::Stuck(
+                &quot;retrace expected an agent the group does not have&quot;,
+            ));
+            return Some(lead);
+        };
+        let id = found.id;
+        if id == cx.me.id {
+            cx.me.state = AgentState::Settled;
+        } else {
+            cx.write(id).state = AgentState::Settled;
+        }
+        lead.group_size -= 1;
+        id
+    };
+    if lead.group_size == 0 {
+        return None;
+    }
+
+    let mut owner = cx.find(owner_id).expect(&quot;just found&quot;).clone();
+    let mut sibling = lead.sibling_details;
+    let to_parent = |owner: &amp;Memory| {
+        (
+            owner.parent.map(|(id, _)| id),
+            owner.parent_port,
+            owner.sibling,
+        )
+    };
+    let reconfigured_back = owner.old_parent_port.is_some()
+        &amp;&amp; arrival == owner.old_parent_port
+        &amp;&amp; arrival != owner.parent_port;
+    let (next_agent, next_port) = if reconfigured_back {
+        // Reached through the old parent's chain of children, which still
+        // lists this node from before its reconfiguration. Treat it as the
+        // leaf it was there and go back the way the group came.
+        sibling = owner.old_sibling;
+        (owner.old_parent.map(|(id, _)| id), arrival)
+    } else if let Some(child) = owner.recent_child {
+        if Some(child) == arrival {
+            if let Some((id, port)) = lead.sibling_details {
+                // Lines 19-21: across to the previous sibling.
+                sibling = None;
+                owner.recent_child = Some(port);
+                (Some(id), Some(port))
+            } else {
+                // Lines 15-17: no more children, up to the parent.
+                owner.recent_child = None;
+                let (id, port, next_sibling) = to_parent(&amp;owner);
+                sibling = next_sibling;
+                (id, port)
+            }
+        } else {
+            // Lines 23-27: down to the most recent child, expecting its agent
+            // if the group holds it. A reconfigured child is matched by its
+            // old parent link too.
+            let me = owner.id;
+            let expected = cx
+                .group_here()
+                .into_iter()
+                .find(|m| m.parent == Some((me, child)) || m.old_parent == Some((me, child)))
+                .map(|m| m.id);
+            (expected, Some(child))
+        }
+    } else {
+        // Lines 29-32: a leaf, up to the parent.
+        let (id, port, next_sibling) = to_parent(&amp;owner);
+        sibling = next_sibling;
+        (id, port)
+    };
+    let Some(port) = next_port else {
+        cx.note(Note::Stuck(
+            &quot;retrace ran past the root with agents still away&quot;,
+        ));
+        return Some(lead);
+    };
+    lead.next_agent_id = next_agent;
+    lead.sibling_details = sibling;
+    cx.note(Note::RetraceMove);
+
+    if owner_id == cx.me.id {
+        // The lead is home. Its context goes to the next lowest ID, which
+        // issues the move this cycle chose.
+        cx.me = Memory {
+            lead: None,
+            ..owner
+        };
+        lead.phase = Phase::RetraceIssue { port };
+        let next = cx
+            .others()
+            .filter(|m| m.state == AgentState::SettledScout)
+            .map(|m| m.id)
+            .min()
+            .expect(&quot;the group is not empty&quot;);
+        cx.write(next).lead = Some(lead);
+        return None;
+    }
+    write_owner(cx, owner_id, owner);
+    issue(cx, &amp;mut lead, Command::Move { port });
+    lead.phase = Phase::RetraceDepart;
+    Some(lead)
+}</template></div>
 
   <script type="module">
     const engine = document.getElementById('codeTitle');

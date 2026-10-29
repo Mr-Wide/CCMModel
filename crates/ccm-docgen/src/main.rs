@@ -261,9 +261,15 @@ fn extract(source: &str, name: &str) -> Option<String> {
             doc.push(line);
             continue;
         }
-        let is_fn = trimmed.starts_with(&format!("fn {name}"))
-            || trimmed.starts_with(&format!("pub fn {name}"));
-        let boundary = is_fn && trimmed[trimmed.find(name)? + name.len()..].starts_with(['<', '(']);
+        // Any visibility: `fn`, `pub fn`, `pub(super) fn`, `pub(crate) fn`.
+        let unqualified = trimmed.strip_prefix("pub").map_or(trimmed, |rest| {
+            rest.strip_prefix(' ')
+                .or_else(|| rest.find(") ").map(|close| &rest[close + 2..]))
+                .unwrap_or(rest)
+        });
+        let is_fn = unqualified.starts_with(&format!("fn {name}"));
+        let boundary =
+            is_fn && unqualified[unqualified.find(name)? + name.len()..].starts_with(['<', '(']);
         if !boundary {
             doc.clear();
             continue;
@@ -296,7 +302,6 @@ fn main() {
     let mut missing = Vec::new();
 
     for chart in CHARTS {
-        let source = fs::read_to_string(root.join(chart.source)).expect("chart source");
         let _ = write!(
             nav,
             r#"<button class="chart-tab" type="button" data-chart="{}">{}</button>"#,
@@ -316,18 +321,27 @@ fn main() {
             svg_for(chart)
         );
 
+        // Keyed by chart as well as name: two algorithms can each have a
+        // `retrace`, and a box must open its own.
+        let mut emitted = std::collections::BTreeSet::new();
         for node in chart.nodes {
             let Some(name) = node.func else { continue };
+            if !emitted.insert(name) {
+                continue;
+            }
+            let file = node.file.unwrap_or(chart.source);
+            let source = fs::read_to_string(root.join(file)).expect("chart source");
             match extract(&source, name) {
                 Some(code) => {
                     let _ = write!(
                         code_blocks,
-                        r#"<template data-code="{name}" data-source="{}">{}</template>"#,
-                        escape(chart.source),
+                        r#"<template data-chart="{}" data-code="{name}" data-source="{}">{}</template>"#,
+                        chart.id,
+                        escape(file),
                         escape(&code)
                     );
                 }
-                None => missing.push(format!("{}::{name}", chart.crate_name)),
+                None => missing.push(format!("{file}::{name}")),
             }
         }
     }

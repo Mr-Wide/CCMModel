@@ -30,8 +30,9 @@ only to check decisions, below.
 | `Schedule` | Meaning |
 |---|---|
 | `Synchronous` | Every agent completes one cycle per round, all reading the state the round began with. Two writes to one agent in a round are an error. |
-| `Random { seed }` | One agent at a time, chosen uniformly from a seed. Cycles are atomic. |
+| `Random { seed }` | One agent at a time, chosen uniformly from a seed. Cycles are atomic: nobody acts between an agent's look and its write. |
 | `Starve { seed, agent, period }` | As `Random`, but one agent acts only every `period` steps: a slow scout or a slow lead. |
+| `Interleaved { seed }` | The paper's ASYNC in full. Each cycle is two steps of the random order: a look, which reads the node and computes, and a later commit, which writes and leaves. Other agents act in between, so a commit can act on a stale view. A commit that would write over memory changed since its look fails the run (`WriteConflict`), because the paper's model would silently lose that change. The web page's *Asynchronous* schedule uses this one. |
 
 Time is counted in **epochs**: the shortest intervals in which every agent
 completes a cycle (Section 2). A move's cycle completes on arrival. Under
@@ -121,9 +122,14 @@ vacated nodes is no longer the paper's argument. It is measured below instead.
   `SettledAwayFromHome`. The global record is used only here.
 - **Sweep.** Every one of 8 graph families, 3 port assignments, 6 seeds,
   n ∈ {5, 6, 7, 8, 10, 12, 16} and every k from 2 to n: 8,208 runs under
-  `Synchronous` and 24,624 under three random schedules, with no
-  disagreement and no deadlock. Reproduce with
-  `cargo run --release -p ccm-experiments --example rooted_async_sweep [seed]`.
+  `Synchronous`, 24,624 under three random schedules, and 49,248 under six
+  interleaved ones, with no disagreement and no deadlock. Reproduce with
+  `cargo run --release -p ccm-experiments --example rooted_async_sweep [seed | iSEED]`.
+- **Interleaving is real.** Under `Interleaved`, about 2.3 million commits
+  per 8,208-run sweep act on a view that went stale between look and commit,
+  in every run. None ever writes over memory someone else changed in that
+  gap, so it makes no difference whether a write replaces an agent's whole
+  memory or only the fields it changed.
 - **Tests** in `ccm-experiments/tests/rooted_async.rs`:
   - the paper's example run, final placement and vacate count, under every
     schedule;
@@ -142,10 +148,13 @@ including the large cases, and prints a PASS or FAIL line per property.
 
 1. **Dispersion.** Every run ends with every agent settled at its own home
    and no node holding more than one agent. Checked over 8 families, 3 seeds,
-   k ∈ {3, 12, 24} on 24 nodes, under synchronous and random schedules.
+   k ∈ {3, 12, 24} on 24 nodes, under synchronous, random and interleaved
+   schedules.
 2. **Asynchrony.**
-   - Every random schedule gives the synchronous placement: 8 seeds, every
-     family.
+   - Every random and every interleaved schedule gives the synchronous
+     placement: 8 seeds each, every family.
+   - Interleaved cycles really overlap: every run has commits acting on a
+     stale view, and an atomic schedule has none.
    - Holding back any one agent, scout or lead, settled or not, changes
      neither the placement nor the step bound.
    - Random schedules really interleave: more than 1.5k activations per
@@ -162,7 +171,29 @@ including the large cases, and prints a PASS or FAIL line per property.
    | Retrace epochs | ≤ 10k | ≤ 6.6k |
 
    A complete graph, degree k − 1, never takes longer per step than a path,
-   so the degree does not enter the step cost either.
+   so the degree does not enter the step cost either. The same bounds hold
+   under the interleaved schedule.
+4. **Memory.** Theorem 2 claims `O(log(k + Δ))` bits per agent, counting what
+   an agent stores from one cycle to the next (Section 2). The simulator
+   charges each field of an agent's memory what its value needs: an ID
+   `⌈log₂ k⌉` bits, a port `⌈log₂ Δ⌉`, a counter the bits of its current
+   value, an enum its tag and payload (`rooted_async/bits.rs`). It reports the
+   most any agent holds after any write.
+
+   | Graph | k = 8 | k = 256 | × log₂(k+Δ) at 8 → 256 |
+   |---|---|---|---|
+   | path | 120 bits | 182 bits | 36.1 → 22.7 |
+   | star | 124 | 219 | 31.7 → 24.3 |
+   | complete | 121 | 211 | 31.0 → 23.5 |
+   | 3-ary tree | 159 | 241 | 44.4 → 30.0 |
+   | grid, 8 wide | 120 | 237 | 36.1 → 29.5 |
+   | random, 2k extra edges | 164 | 302 | 43.1 → 37.4 |
+   | random, dense | 164 | 365 | 43.1 → 42.1 |
+
+   Every run stays under 48 × log₂(k+Δ), and the multiple falls as k grows:
+   thirty-two times the agents costs 60 to 200 more bits. The same figures
+   hold under every schedule. This is a measurement of this encoding, not of
+   the paper's; a tighter one would only lower it.
 
 The bounds are measured, not proved. A finite run can refute O(k), but cannot
 establish it. To check that the script can fail, the step bound was briefly
@@ -207,34 +238,40 @@ random ports. `vac/k` is the share of agents vacated by the end.
 - **Async versus sync.** Asynchronous epochs are fewer than synchronous rounds
   because a random schedule activates many agents more than once per epoch.
 
-These are counts from finite runs, not proofs. Wall-clock time is not reported.
+These are counts from finite runs, not proofs. Wall-clock time is not reported
+as a result; for planning, a synchronous run with k = 1024 on a path takes
+about 5 seconds, and an interleaved one on a dense random graph about 40.
 Reproduce the k ≤ 256 rows with
 `cargo run --release -p ccm-experiments --example rooted_async_scaling`.
 
 ## Command line and browser (Stages 2 and 3)
 
 - **CLI.** `ccm run` and `ccm sweep` accept `--algorithm rooted-async` and
-  `--scheduler synchronous|asynchronous|starved:AGENT:PERIOD`. Every CSV row
+  `--scheduler synchronous|asynchronous|interleaved|starved:AGENT:PERIOD`. Every CSV row
   carries `scheduler` and `time_unit`, so rounds and epochs are never confused.
   Any other algorithm rejects a non-synchronous scheduler. `ccm events` prints
   one run's probes (with the rule that decided each) and DFS steps, each with
   its epoch. See `experiments/README.md`.
 - **Browser.** The simulator's and dashboard's algorithm menus have a
   *RootedAsync* entry. Choosing it reveals a *Schedule* menu: synchronous, or
-  asynchronous. The asynchronous order is seeded from the page's seed field,
-  and the counter is labelled epochs instead of rounds.
+  asynchronous, which runs the interleaved schedule. The asynchronous order is
+  seeded from the page's seed field, and the counter is labelled epochs
+  instead of rounds.
   Playback replays one snapshot per epoch. This was checked in headless Edge
   on the served page: both entries complete, the replay ends dispersed, and
   the page reports no errors.
 - **Golden file.** The golden sweep now pins `RootedAsync` under the
   synchronous and an asynchronous schedule as well.
 
-## Not done yet
+## Limits
 
-- **Memory.** The per-agent bit count of Theorem 2 is not measured. Agents
-  carry Table 2 plus a constant number of extra fields, all IDs and ports.
-- **Atomic cycles.** Under the random schedules a cycle is atomic: nobody acts
-  between an agent's look and its write. The paper's ASYNC also allows those
-  to interleave.
-- **Simulator cost.** A synchronous round costs O(k²) in the simulator, which
-  limits runs to a few hundred agents. This is not a property of the algorithm.
+- **Measured, not proved.** The time and memory bounds above are checked on
+  finite runs. A run can refute them, not establish them.
+- **Memory encoding.** Bits are counted for this implementation's fields. It
+  carries some bookkeeping the paper does not (command numbers, the lead's
+  batch counters), all of it IDs, ports or counters bounded by O(k), so it
+  changes the constant, not the order.
+- **Simulator cost.** The simulator finds co-located agents through per-node
+  indexes, so a run costs roughly O(k²) in total, and O(k² log k) under the
+  random orders, whose epochs need about k·ln k activations. Debug builds check
+  every index against a full scan of the node.

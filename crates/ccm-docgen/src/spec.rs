@@ -28,8 +28,20 @@ pub struct Node {
     pub row: f64,
     pub shape: Shape,
     /// Function this box stands for, if clicking it should show code. The name
-    /// must exist in the crate named by the chart.
+    /// must exist in the chart's source file, or in `file` if that is set.
     pub func: Option<&'static str>,
+    /// The file `func` is in, for an algorithm whose code spans several.
+    pub file: Option<&'static str>,
+}
+
+impl Node {
+    /// The same box, with its function looked up in `file`.
+    const fn in_file(self, file: &'static str) -> Self {
+        Self {
+            file: Some(file),
+            ..self
+        }
+    }
 }
 
 /// How an edge gets from one box to another.
@@ -75,6 +87,7 @@ const fn n(
         row,
         shape,
         func,
+        file: None,
     }
 }
 
@@ -625,6 +638,209 @@ pub static CHARTS: &[Chart] = &[
             e("popped", "next", Some("no"), Route::Direct),
             e("popped", "retrace", Some("yes"), Route::Around(-2)),
             e("next", "disp", None, Route::Around(7)),
+        ],
+    },
+    Chart {
+        id: "rooted_async",
+        title: "RootedAsync",
+        crate_name: "ccm-algorithms",
+        source: "crates/ccm-algorithms/src/rooted_async/lead.rs",
+        blurb: "The same DFS run agent by agent. A schedule activates agents one cycle at a \
+                time; in each, an agent reads only the agents at its node, writes its own memory \
+                and at most one other, and moves along at most one port. One agent leads: it \
+                settles the highest unsettled ID, sends the group out in probe batches, concludes \
+                each probe by rules R1 to R3c from what the group remembers, and decides the next \
+                edge and who vacates. Members carry out its numbered commands. The simulator \
+                checks every probe's conclusion against the truth. When nobody is unsettled the \
+                lead role passes to the scouts, who walk the tree home.",
+        nodes: &[
+            n(
+                "start",
+                "simulate()",
+                0.0,
+                0.0,
+                Shape::Entry,
+                Some("simulate"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/mod.rs"),
+            n("sched", "schedule?", 0.0, 1.0, Shape::Decision, None),
+            n(
+                "sync",
+                "run_synchronous():|every agent, one round",
+                -1.5,
+                2.0,
+                Shape::Step,
+                Some("run_synchronous"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/run.rs"),
+            n(
+                "rand",
+                "run_asynchronous():|one agent at a time",
+                0.0,
+                2.0,
+                Shape::Step,
+                Some("run_asynchronous"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/run.rs"),
+            n(
+                "inter",
+                "run_interleaved():|look now, write later",
+                1.5,
+                2.0,
+                Shape::Step,
+                Some("run_interleaved"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/run.rs"),
+            n(
+                "act",
+                "activate():|one agent, one cycle",
+                0.0,
+                3.0,
+                Shape::Step,
+                Some("activate"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/agent.rs"),
+            n("task", "lead, or task?", 0.0, 4.0, Shape::Decision, None),
+            n(
+                "follow",
+                "follow(): carry out|the newest command",
+                1.6,
+                5.0,
+                Shape::Step,
+                Some("follow"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/agent.rs"),
+            n(
+                "probe",
+                "probe_step():|one hop of R1-R3",
+                1.6,
+                6.0,
+                Shape::Step,
+                Some("probe_step"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/agent.rs"),
+            n(
+                "errand",
+                "errand_step():|a V2-V5 excursion",
+                1.6,
+                7.0,
+                Shape::Step,
+                Some("errand_step"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/agent.rs"),
+            n(
+                "gather",
+                "arrive(): settle the|highest ID, or D4",
+                0.0,
+                5.0,
+                Shape::Step,
+                Some("arrive"),
+            ),
+            n("left", "anyone|unsettled?", 0.0, 6.0, Shape::Decision, None),
+            n(
+                "plan",
+                "plan_probe():|batches, scatter mode",
+                0.0,
+                7.0,
+                Shape::Step,
+                Some("plan_probe"),
+            ),
+            n(
+                "batch",
+                "finish_batch():|conclude each probe",
+                0.0,
+                8.0,
+                Shape::Step,
+                Some("finish_batch"),
+            ),
+            n(
+                "resolve",
+                "resolve(): R1-R3c",
+                1.6,
+                8.6,
+                Shape::Aside,
+                Some("resolve"),
+            )
+            .in_file("crates/ccm-algorithms/src/rooted_async/probe.rs"),
+            n("more", "ports left?", 0.0, 9.0, Shape::Decision, None),
+            n(
+                "decide",
+                "decide(): node type,|next edge, who vacates",
+                0.0,
+                10.0,
+                Shape::Step,
+                Some("decide"),
+            ),
+            n(
+                "vacate",
+                "errand_done():|V2-V5 outcome",
+                0.0,
+                11.0,
+                Shape::Step,
+                Some("errand_done"),
+            ),
+            n(
+                "move",
+                "begin_move(): group|leaves, lead last",
+                0.0,
+                12.0,
+                Shape::Step,
+                Some("begin_move"),
+            ),
+            n(
+                "begin",
+                "begin_retrace():|lead passes to a scout",
+                -1.5,
+                6.0,
+                Shape::Step,
+                Some("begin_retrace"),
+            ),
+            n(
+                "rstep",
+                "retrace_step():|next node home",
+                -1.5,
+                7.0,
+                Shape::Step,
+                Some("retrace_step"),
+            ),
+            n(
+                "travel",
+                "scouts still|travelling?",
+                -1.5,
+                8.0,
+                Shape::Decision,
+                None,
+            ),
+            n("done", "Completed", -1.5, 9.0, Shape::Terminal, None),
+        ],
+        edges: &[
+            e("start", "sched", None, Route::Direct),
+            e("sched", "sync", Some("synchronous"), Route::Direct),
+            e("sched", "rand", Some("random"), Route::Direct),
+            e("sched", "inter", Some("interleaved"), Route::Direct),
+            e("sync", "act", None, Route::Direct),
+            e("rand", "act", None, Route::Direct),
+            e("inter", "act", None, Route::Direct),
+            e("act", "task", None, Route::Direct),
+            e("task", "gather", Some("lead"), Route::Direct),
+            e("task", "follow", Some("member, idle"), Route::Direct),
+            e("task", "probe", Some("probing"), Route::Direct),
+            e("task", "errand", Some("errand"), Route::Direct),
+            e("gather", "left", None, Route::Direct),
+            e("left", "begin", Some("no"), Route::Direct),
+            e("left", "plan", Some("yes"), Route::Direct),
+            e("plan", "batch", None, Route::Direct),
+            e("batch", "more", None, Route::Direct),
+            e("more", "batch", Some("yes"), Route::Around(1)),
+            e("more", "decide", Some("no"), Route::Direct),
+            e("decide", "vacate", None, Route::Direct),
+            e("vacate", "move", None, Route::Direct),
+            e("move", "gather", Some("next node"), Route::Around(-1)),
+            e("begin", "rstep", None, Route::Direct),
+            e("rstep", "travel", None, Route::Direct),
+            e("travel", "rstep", Some("yes"), Route::Around(-1)),
+            e("travel", "done", Some("no"), Route::Direct),
+            aside("batch", "resolve", Some("rules")),
         ],
     },
 ];

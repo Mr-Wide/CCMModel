@@ -37,7 +37,8 @@ unchanged:
 - `algorithm_kind` is `paper` for an algorithm written from a publication and
   `legacy_baseline` for Drop-and-Freeze and Help-by-Scouts, which preserve this
   repository's historical code.
-- `scheduler` is `synchronous`, `asynchronous` or `starved:AGENT:PERIOD`.
+- `scheduler` is `synchronous`, `asynchronous`, `interleaved` or
+  `starved:AGENT:PERIOD`.
 - `time_unit` says what `rounds` counts: synchronous `round`s, or asynchronous
   `epoch`s, the shortest intervals in which every agent completes a cycle. The
   two are not comparable; never mix them in one analysis.
@@ -57,8 +58,10 @@ seed, so a row is reproducible from its own values:
 ./target/release/ccm sweep   --algorithm rooted-async --scheduler asynchronous   --graph grid:8 --nodes 64,128 --agents 32,64 --seeds 1,2,3   --ports random --workers 8 > rooted-async.csv
 ```
 
-`--scheduler starved:AGENT:PERIOD` activates one agent only every `PERIOD`
-steps, to watch a slow scout or a slow lead.
+`--scheduler interleaved` is the paper's ASYNC in full: each cycle's look and
+its write are separate steps of the random order, so other agents act in
+between. `--scheduler starved:AGENT:PERIOD` activates one agent only every
+`PERIOD` steps, to watch a slow scout or a slow lead.
 
 `ccm events` traces a single run instead: every probe the head concluded (with
 the rule that decided it, R1 to R3c-ii) and every DFS step (direction, probe
