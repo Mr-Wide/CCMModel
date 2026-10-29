@@ -59,22 +59,23 @@ function takeFromExternrefTable0(idx) {
 }
 /**
  * Algorithm selector shared by native and browser callers.
- * @enum {0 | 1 | 2 | 3 | 4}
+ * @enum {0 | 1 | 2 | 3 | 4 | 5}
  */
 export const AlgorithmSelector = Object.freeze({
     HelpByScouts: 0, "0": "HelpByScouts",
     DropAndFreeze: 1, "1": "DropAndFreeze",
     P1Tree: 2, "2": "P1Tree",
+    RootedDisp: 3, "3": "RootedDisp",
     /**
      * `RootedAsync` under the synchronous scheduler: one cycle per agent per
      * round.
      */
-    RootedAsync: 3, "3": "RootedAsync",
+    RootedAsync: 4, "4": "RootedAsync",
     /**
-     * `RootedAsync` under a random asynchronous order, seeded by
+     * `RootedAsync` under the paper's asynchronous schedule, seeded by
      * [`WasmSimulation::set_schedule_seed`]. Time is counted in epochs.
      */
-    RootedAsyncRandom: 4, "4": "RootedAsyncRandom",
+    RootedAsyncRandom: 5, "5": "RootedAsyncRandom",
 });
 /**
  * Trace policy. `Bounded` uses the supplied record and sampling limits.

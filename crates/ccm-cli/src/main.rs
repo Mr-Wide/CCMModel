@@ -275,6 +275,9 @@ fn parse_algorithm(value: &str) -> Result<Algorithm, CliError> {
         "help-by-scouts" | "help_by_scouts" => Ok(Algorithm::HelpByScouts),
         "p1tree" | "p1-tree" | "dfs-p1tree" => Ok(Algorithm::P1Tree),
         "rooted-async" | "rooted_async" | "rootedasync" => Ok(Algorithm::RootedAsync),
+        "rooted-disp" | "rooted_disp" | "rooteddisp" | "heo-dfs" | "rooted-heo-dfs" => {
+            Ok(Algorithm::RootedDisp)
+        }
         _ => Err(CliError::Parse(format!("unknown algorithm {value:?}"))),
     }
 }
@@ -364,6 +367,6 @@ where
 
 fn print_help() {
     println!(
-        "ccm commands:\n  validate [options]  generate and validate one deterministic run\n  run [options]       execute one run and emit CSV\n  sweep [options]     execute independent runs and emit CSV\n  events [options]    trace one rooted-async run: every DFS step and probe, as CSV\n\noptions:\n  --algorithm drop-and-freeze|help-by-scouts|p1tree|rooted-async\n  --scheduler synchronous|asynchronous|interleaved|starved:AGENT:PERIOD  (non-synchronous:\n              rooted-async only; interleaved splits each cycle's look and write; time is then\n              counted in epochs, and the CSV time_unit column says so)\n  --graph path|cycle|star|complete|tree[:branching]|grid[:columns]|random-connected:extra|random-bounded:max-degree\n  --nodes N[,N...] --agents A[,A...] --seed S[,S...]\n  --ports canonical|random|adversarial\n  --placement single[:node]|uniform:K|clustered:n,n|explicit:n,n\n  --round-limit R --workers W"
+        "ccm commands:\n  validate [options]  generate and validate one deterministic run\n  run [options]       execute one run and emit CSV\n  sweep [options]     execute independent runs and emit CSV\n  events [options]    trace one rooted-async run: every DFS step and probe, as CSV\n\noptions:\n  --algorithm drop-and-freeze|help-by-scouts|p1tree|rooted-async|rooted-disp\n  --scheduler synchronous|asynchronous|interleaved|starved:AGENT:PERIOD  (non-synchronous:\n              rooted-async only; interleaved splits each cycle's look and write; time is then\n              counted in epochs, and the CSV time_unit column says so)\n  --graph path|cycle|star|complete|tree[:branching]|grid[:columns]|random-connected:extra|random-bounded:max-degree\n  --nodes N[,N...] --agents A[,A...] --seed S[,S...]\n  --ports canonical|random|adversarial\n  --placement single[:node]|uniform:K|clustered:n,n|explicit:n,n\n  --round-limit R --workers W"
     );
 }

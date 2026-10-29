@@ -154,6 +154,7 @@ mod tests {
             (Algorithm::HelpByScouts, "legacy_baseline"),
             (Algorithm::P1Tree, "paper"),
             (Algorithm::RootedAsync, "paper"),
+            (Algorithm::RootedDisp, "paper"),
         ] {
             assert_eq!(
                 cell(&result(algorithm), "algorithm_kind"),

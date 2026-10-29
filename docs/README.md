@@ -5,7 +5,7 @@ Start here.
 ## How the algorithms work
 
 - **[The interactive flowcharts](https://drdebmath.github.io/CCMModel/docs.html)** —
-  the same three charts as a page you can pan and zoom, where clicking any box
+  the same four charts as a page you can pan and zoom, where clicking any box
   opens the source of the function it stands for. Served alongside the
   simulator; also reachable from either app page's header.
 - **[algorithm-flowcharts.md](algorithm-flowcharts.md)** — one flowchart per
@@ -19,6 +19,9 @@ Start here.
   algorithm of the same paper, with every agent acting only on what it can see
   at its node. How it is modelled, the eleven places the pseudocode needed
   repair (two found by the simulator checking itself), and measurements.
+- [rooted-disp.md](rooted-disp.md) — RootedDisp, the rooted HEO-DFS of Sudo et
+  al., *Near-linear Time Dispersion of Mobile Agents*: its time steps, the
+  decisions taken where Algorithm 1 leaves a choice, and two worked traces.
 - [behavior-spec.md](behavior-spec.md) — Drop-and-Freeze and Help-by-Scouts,
   as they behaved in the Python implementation the Rust ports preserve.
   **Archival**: it cites files this repository no longer contains.

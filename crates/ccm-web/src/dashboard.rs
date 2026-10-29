@@ -849,6 +849,8 @@ pub fn start_dashboard() -> Result<(), JsValue> {
                 } else if algorithm == "p1tree" || algorithm == "rooted_async" {
                     "This algorithm requires a rooted start; every sweep places all agents at \
                      node 0."
+                } else if algorithm == "rooted" {
+                    "RootedDisp requires a rooted start; every sweep places all agents at node 0."
                 } else {
                     "All agents start at node 0, so the classes are compared on the same placement."
                 },

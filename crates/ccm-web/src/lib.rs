@@ -108,6 +108,11 @@ pub struct Frame {
     /// Probes the head concluded since the previous frame (`RootedAsync`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub probes: Vec<ProbeNote>,
+    /// The phase code (`ccm-wasm`'s `phase_code`) of the step this frame
+    /// belongs to. Defaulted so executions exported before phases were kept
+    /// still import cleanly under the same schema version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phase: Option<u8>,
 }
 
 /// One probe the head concluded: the port, the rule that decided it, and the
@@ -200,6 +205,11 @@ struct AppState {
     config: Option<Config>,
     result: Option<ResultData>,
     frames: Vec<Frame>,
+    /// One line per frame from [`frame_notes`], shown under the playback bar.
+    notes: Vec<String>,
+    /// The last comparison's rows, and which of them is loaded for playback.
+    comparison: Vec<ComparisonRow>,
+    compare_selected: Option<usize>,
     frame: usize,
     timer: Option<i32>,
     layout: Vec<(f64, f64)>,
@@ -429,6 +439,7 @@ fn algorithm_label(value: &str) -> &'static str {
     match value {
         "help" => "Help by Scouts",
         "p1tree" => "P1Tree",
+        "rooted" => "RootedDisp",
         "rooted_async" => "RootedAsync (synchronous)",
         "rooted_async_random" => "RootedAsync (asynchronous)",
         _ => "Drop and Freeze",
@@ -459,10 +470,10 @@ pub(crate) fn sync_schedule_menu(document: &Document) {
     sync_placement(document, needs_rooted_start(&algorithm));
 }
 
-/// Help by Scouts, P1Tree and `RootedAsync` are defined for a rooted start
-/// only; any other placement makes the engine refuse or break the run.
+/// Help by Scouts, P1Tree, RootedDisp and `RootedAsync` are defined for a
+/// rooted start only; any other placement makes the engine refuse or break the run.
 fn needs_rooted_start(algorithm: &str) -> bool {
-    matches!(algorithm, "help" | "p1tree" | "rooted_async")
+    matches!(algorithm, "help" | "p1tree" | "rooted" | "rooted_async")
 }
 
 /// Shows the Groups count only for the grouped placement.
@@ -547,6 +558,122 @@ fn final_frame(result: &ResultData) -> Frame {
         homes: result.homes.clone(),
         ..Frame::default()
     }
+}
+
+/// Name of a phase code as `ccm-wasm` encodes it.
+fn phase_name(code: u8) -> &'static str {
+    match code {
+        0 => "macro-round",
+        1 => "probe out",
+        2 => "probe back",
+        3 => "movement",
+        4 => "scout",
+        5 => "vacate",
+        6 => "chase",
+        7 => "follow",
+        8 => "retrace",
+        9 => "start",
+        10 => "helpers home",
+        _ => "unknown phase",
+    }
+}
+
+/// `1 helper at node 4`, `3 helpers away from home`, or `no helpers`: the
+/// agents a frame shows as settled but away (status 2).
+fn helper_summary(frame: &Frame) -> String {
+    let away: Vec<u32> = frame
+        .statuses
+        .iter()
+        .zip(&frame.positions)
+        .filter(|(status, _)| **status == 2)
+        .map(|(_, node)| *node)
+        .collect();
+    let plural = if away.len() == 1 { "" } else { "s" };
+    match away.first() {
+        None => "no helpers".to_owned(),
+        Some(node) if away.iter().all(|other| other == node) => {
+            format!("{} helper{plural} at node {node}", away.len())
+        }
+        Some(_) => format!("{} helper{plural} away from home", away.len()),
+    }
+}
+
+/// One note per playback frame naming the step and phase it shows. For
+/// RootedDisp (`algorithm == "rooted"`) it also numbers the `Probe()` calls
+/// and their passes, counts the helpers, and says which DFS move a movement
+/// step was — all read from the frames, never recomputed. A bounded trace
+/// that sampled steps away numbers only the probes it kept.
+pub fn frame_notes(frames: &[Frame], algorithm: &str) -> Vec<String> {
+    let rooted = algorithm == "rooted";
+    let mut notes = vec![String::new(); frames.len()];
+    let (mut probe, mut pass) = (0_u64, 0_u64);
+    let mut previous_phase: Option<u8> = None;
+    let mut previous_end: Option<usize> = None;
+    let mut start = 0;
+    while start < frames.len() {
+        let step = frames[start].step;
+        let mut end = start;
+        while end + 1 < frames.len() && frames[end + 1].step == step {
+            end += 1;
+        }
+        let phase = frames[start..=end].iter().find_map(|frame| frame.phase);
+        let last = &frames[end];
+        let note = match phase {
+            None if step == 0 => "Start".to_owned(),
+            None => format!("Step {step}"),
+            Some(9) => "Start".to_owned(),
+            Some(code) if !rooted => format!("Step {step} · {}", phase_name(code)),
+            Some(1) => {
+                if previous_phase == Some(2) {
+                    pass += 1;
+                } else {
+                    probe += 1;
+                    pass = 1;
+                }
+                format!(
+                    "Step {step} · Probe {probe}, pass {pass} · probe out · {}",
+                    helper_summary(last)
+                )
+            }
+            Some(2) => format!(
+                "Step {step} · Probe {probe}, pass {pass} · probe back · {}",
+                helper_summary(last)
+            ),
+            Some(10) => format!("Step {step} · Probe {probe} · helpers home"),
+            Some(3) => {
+                let before = previous_end.map(|index| &frames[index].statuses);
+                let settled = last.statuses.iter().enumerate().find(|&(agent, status)| {
+                    *status == 0 && before.and_then(|b| b.get(agent)) == Some(&1)
+                });
+                match settled {
+                    Some((agent, _)) => format!(
+                        "Step {step} · forward move · agent {agent} settles at node {}",
+                        last.positions[agent]
+                    ),
+                    None => {
+                        let to = last
+                            .statuses
+                            .iter()
+                            .position(|status| *status == 1)
+                            .map_or_else(String::new, |agent| {
+                                format!(" to node {}", last.positions[agent])
+                            });
+                        format!("Step {step} · backward move{to}")
+                    }
+                }
+            }
+            Some(code) => format!("Step {step} · {}", phase_name(code)),
+        };
+        for slot in &mut notes[start..=end] {
+            slot.clone_from(&note);
+        }
+        if phase.is_some() {
+            previous_phase = phase;
+        }
+        previous_end = Some(end);
+        start = end + 1;
+    }
+    notes
 }
 
 fn same_frame(a: &Frame, b: &Frame) -> bool {
@@ -692,7 +819,9 @@ fn read_trace(bytes: &[u8], starts: &[u32], result: &ResultData) -> (Vec<Frame>,
                 next.step = step;
                 match event {
                     0 => {
-                        let _ = reader.u8();
+                        if let Some(code) = reader.u8() {
+                            next.phase = Some(code);
+                        }
                     }
                     1 => {
                         let agent = reader.u32();
@@ -798,6 +927,7 @@ fn read_trace(bytes: &[u8], starts: &[u32], result: &ResultData) -> (Vec<Frame>,
                     label: None,
                     transit,
                     probes: std::mem::take(&mut pending_probes),
+                    phase: current.phase,
                 };
                 frames.push(current.clone());
             }
@@ -833,6 +963,11 @@ fn set_busy(state: &Rc<RefCell<AppState>>, busy: bool) {
     let mut app = state.borrow_mut();
     app.busy = busy;
     set_disabled(&element::<HtmlElement>(&app.document, "run"), busy);
+    set_disabled(&element::<HtmlElement>(&app.document, "compare"), busy);
+    set_disabled(
+        &element::<HtmlElement>(&app.document, "comparePreset"),
+        busy,
+    );
     set_disabled(&element::<HtmlElement>(&app.document, "cancel"), !busy);
     set_disabled(&element::<HtmlElement>(&app.document, "import"), busy);
 }
@@ -846,6 +981,11 @@ fn update_frame_label(app: &AppState) {
             app.frame,
             app.frames.len().saturating_sub(1)
         ),
+    );
+    set_text(
+        &app.document,
+        "phaseLabel",
+        app.notes.get(app.frame).map_or("", String::as_str),
     );
     set_text(
         &app.document,
@@ -884,6 +1024,15 @@ fn frame_caption(frame: &Frame) -> String {
         ));
     }
     parts.join(" \u{b7} ")
+}
+
+/// Recomputes the per-frame notes after the frames or the algorithm change.
+fn refresh_notes(app: &mut AppState) {
+    let algorithm = app
+        .config
+        .as_ref()
+        .map_or("", |config| config.algorithm.as_str());
+    app.notes = frame_notes(&app.frames, algorithm);
 }
 
 fn set_timeline(app: &AppState) {
@@ -1764,6 +1913,7 @@ fn accept_result(state: &Rc<RefCell<AppState>>, result: ResultData) {
     app.frames = frames;
     app.frame = 0;
     app.result = Some(result.clone());
+    refresh_notes(&mut app);
     let config = app.config.clone();
     set_text(&app.document, "rounds", &result.rounds.to_string());
     let unit = config
@@ -1819,14 +1969,26 @@ fn accept_result(state: &Rc<RefCell<AppState>>, result: ResultData) {
     resize(state);
 }
 
+/// Algorithms the comparison runs, RootedDisp first so its row loads first.
+const COMPARED: [&str; 5] = ["rooted", "rooted_async", "drop", "help", "p1tree"];
+
+/// Sends one job to the worker: `"run"` for the configured algorithm, or
+/// `"compare"` for every algorithm in `algorithms` on the same inputs.
 fn post_run(
     worker: &Worker,
+    kind: &str,
+    algorithms: &[&str],
     config: &Config,
     graph: &Graph,
     starts: &[u32],
 ) -> Result<(), JsValue> {
     let message = Object::new();
-    Reflect::set(&message, &"type".into(), &"run".into())?;
+    Reflect::set(&message, &"type".into(), &kind.into())?;
+    let names = Array::new();
+    for name in algorithms {
+        names.push(&JsValue::from_str(name));
+    }
+    Reflect::set(&message, &"algorithms".into(), &names)?;
     Reflect::set(
         &message,
         &"algorithm".into(),
@@ -1943,7 +2105,7 @@ fn create_worker(state: &Rc<RefCell<AppState>>) {
         } else if typ == "sweep-result" {
             let seed = app.compare_seed.unwrap_or(0);
             let results = Reflect::get(&data, &"results".into()).unwrap_or(JsValue::NULL);
-            show_comparison(&app.document, seed, &results);
+            show_schedule_comparison(&app.document, seed, &results);
             drop(app);
             ready_state.borrow_mut().compare_seed = None;
             set_busy(&ready_state, false);
@@ -1964,6 +2126,13 @@ fn create_worker(state: &Rc<RefCell<AppState>>) {
                     set_busy(&ready_state, false);
                 }
             }
+        } else if typ == "compare-result" {
+            drop(app);
+            match comparison_from_message(&data) {
+                Ok(rows) => accept_comparison(&ready_state, rows),
+                Err(message) => say(&ready_state.borrow().document, &message, "error"),
+            }
+            set_busy(&ready_state, false);
         }
     });
     worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
@@ -1986,15 +2155,95 @@ fn create_worker(state: &Rc<RefCell<AppState>>) {
 }
 
 fn run(state: &Rc<RefCell<AppState>>) {
+    let Some((config, graph, starts)) = prepare(state, false) else {
+        return;
+    };
     let document = state.borrow().document.clone();
+    set_text(
+        &document,
+        "runTitle",
+        &format!("{} · {}", algorithm_label(&config.algorithm), config.family),
+    );
+    start_job(state, "run", &[], &config, &graph, &starts);
+}
+
+/// Runs every algorithm in [`COMPARED`] on one graph, one set of port labels
+/// and one seed, with every agent on node 0: the rooted start P1Tree and
+/// RootedDisp require, so all four answer the same question.
+fn compare(state: &Rc<RefCell<AppState>>) {
+    let Some((config, graph, starts)) = prepare(state, true) else {
+        return;
+    };
+    let document = state.borrow().document.clone();
+    set_text(
+        &document,
+        "runTitle",
+        &format!("Comparing algorithms · {}", config.family),
+    );
+    start_job(state, "compare", &COMPARED, &config, &graph, &starts);
+}
+
+/// The comparison preset: the 9-node star of the RootedDisp worked example,
+/// nine agents at the hub, full trace, then [`compare`].
+fn compare_preset(state: &Rc<RefCell<AppState>>) {
+    {
+        let app = state.borrow();
+        let document = &app.document;
+        element::<HtmlSelectElement>(document, "algorithm").set_value("rooted");
+        element::<HtmlSelectElement>(document, "family").set_value("star");
+        element::<HtmlSelectElement>(document, "placement").set_value("rooted");
+        element::<HtmlSelectElement>(document, "traceMode").set_value("full");
+        element::<HtmlInputElement>(document, "nodes").set_value("9");
+        element::<HtmlInputElement>(document, "agents").set_value("9");
+        for id in ["gridColumnsWrap", "treeBranchingWrap", "sampleEveryWrap"] {
+            let _ = element::<Element>(document, id)
+                .class_list()
+                .add_1("hidden");
+        }
+        let _ = element::<Element>(document, "traceLimitWrap")
+            .class_list()
+            .remove_1("hidden");
+    }
+    compare(state);
+}
+
+fn start_job(
+    state: &Rc<RefCell<AppState>>,
+    kind: &str,
+    algorithms: &[&str],
+    config: &Config,
+    graph: &Graph,
+    starts: &[u32],
+) {
+    let document = state.borrow().document.clone();
+    set_busy(state, true);
+    say(&document, "Preparing the graph…", "busy");
+    create_worker(state);
+    let worker = state.borrow().worker.clone();
+    if let Some(worker) = worker {
+        if post_run(&worker, kind, algorithms, config, graph, starts).is_err() {
+            say(&document, "Unable to start the simulator.", "error");
+            set_busy(state, false);
+        }
+    }
+}
+
+/// Reads and checks the controls, builds the graph and starting placement,
+/// and resets the view for a new execution. `rooted` puts every agent on
+/// node 0 whatever the placement control says, and sets the control to match.
+fn prepare(state: &Rc<RefCell<AppState>>, rooted: bool) -> Option<(Config, Graph, Vec<u32>)> {
+    let document = state.borrow().document.clone();
+    if rooted {
+        element::<HtmlSelectElement>(&document, "placement").set_value("rooted");
+    }
     let mut config = read_config(&document);
     if config.agent_count > config.node_count {
         say(&document, "Agents cannot exceed nodes.", "error");
-        return;
+        return None;
     }
     if needs_rooted_start(&select_value(&document, "algorithm")) && config.placement != "rooted" {
-        say(&document, "Help by Scouts, P1Tree and RootedAsync need every agent to start at node 0. Choose \u{201c}Rooted at node 0\u{201d}.", "error");
-        return;
+        say(&document, "Help by Scouts, P1Tree, RootedDisp and RootedAsync need every agent to start at node 0. Choose \u{201c}Rooted at node 0\u{201d}.", "error");
+        return None;
     }
     if config.family == "complete" && config.node_count > 500 {
         say(
@@ -2002,7 +2251,7 @@ fn run(state: &Rc<RefCell<AppState>>) {
             "Complete graphs are limited to 500 nodes here.",
             "error",
         );
-        return;
+        return None;
     }
     if config.node_count > 1000 && config.trace_mode == "full" {
         config.trace_mode = "bounded".into();
@@ -2023,25 +2272,125 @@ fn run(state: &Rc<RefCell<AppState>>) {
         app.starts = starts.clone();
         app.result = None;
         app.frames.clear();
+        app.notes.clear();
+        app.comparison.clear();
+        app.compare_selected = None;
         app.layout.clear();
         app.layout_size = (0.0, 0.0);
         set_disabled(&element::<HtmlElement>(&app.document, "export"), true);
+        let _ = element::<Element>(&app.document, "comparePanel")
+            .class_list()
+            .add_1("hidden");
     }
-    set_busy(state, true);
-    set_text(
-        &document,
-        "runTitle",
-        &format!("{} · {}", algorithm_label(&config.algorithm), config.family),
+    Some((config, graph, starts))
+}
+
+/// One row of a comparison: the algorithm's UI value and its result, or the
+/// error the worker reported for it.
+type ComparisonRow = (String, Result<ResultData, String>);
+
+fn comparison_from_message(data: &JsValue) -> Result<Vec<ComparisonRow>, String> {
+    let rows = Reflect::get(data, &"results".into())
+        .ok()
+        .and_then(|value| value.dyn_into::<Array>().ok())
+        .ok_or_else(|| "worker comparison did not contain results".to_owned())?;
+    rows.iter()
+        .map(|row| {
+            let algorithm = reflected_value(&row, "algorithm")?
+                .as_string()
+                .ok_or_else(|| "worker comparison row has no algorithm".to_owned())?;
+            let result = match reflected_value(&row, "result") {
+                Ok(value) if !value.is_undefined() => result_from_message(&value),
+                _ => Err(reflected_value(&row, "error")?
+                    .as_string()
+                    .unwrap_or_else(|| "failed".to_owned())),
+            };
+            Ok((algorithm, result))
+        })
+        .collect()
+}
+
+fn escape_html(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+/// Draws the comparison table, marking the row whose playback is loaded.
+fn render_comparison(app: &AppState) {
+    let mut html = String::from(
+        "<table><thead><tr><th>Algorithm</th><th>Result</th><th>Rounds</th>\
+         <th>Moves</th><th>Probes</th><th></th></tr></thead><tbody>",
     );
-    say(&document, "Preparing the graph…", "busy");
-    create_worker(state);
-    let worker = state.borrow().worker.clone();
-    if let Some(worker) = worker {
-        if post_run(&worker, &config, &graph, &starts).is_err() {
-            say(&document, "Unable to start the simulator.", "error");
-            set_busy(state, false);
+    for (index, (algorithm, result)) in app.comparison.iter().enumerate() {
+        let selected = if app.compare_selected == Some(index) {
+            " class=\"selected\""
+        } else {
+            ""
+        };
+        html.push_str(&format!(
+            "<tr{selected}><th>{}</th>",
+            escape_html(algorithm_label(algorithm))
+        ));
+        match result {
+            Ok(result) => html.push_str(&format!(
+                "<td{}>{}</td><td>{}</td><td>{}</td><td>{}</td>\
+                 <td><button type=\"button\" class=\"row-play\" data-compare=\"{index}\">Play</button></td></tr>",
+                if result.termination_code == 0 { "" } else { " class=\"capped\"" },
+                termination(result.termination_code),
+                result.rounds,
+                result.moves,
+                result.probes,
+            )),
+            Err(message) => html.push_str(&format!(
+                "<td class=\"capped\" colspan=\"5\">{}</td></tr>",
+                escape_html(message)
+            )),
         }
     }
+    html.push_str("</tbody></table>");
+    element::<Element>(&app.document, "compareTable").set_inner_html(&html);
+    let _ = element::<Element>(&app.document, "comparePanel")
+        .class_list()
+        .remove_1("hidden");
+}
+
+/// Loads the playback of comparison row `index` into the main view.
+fn show_comparison(state: &Rc<RefCell<AppState>>, index: usize) {
+    let (algorithm, result) = {
+        let app = state.borrow();
+        match app.comparison.get(index) {
+            Some((algorithm, Ok(result))) => (algorithm.clone(), result.clone()),
+            _ => return,
+        }
+    };
+    {
+        let mut app = state.borrow_mut();
+        app.compare_selected = Some(index);
+        if let Some(config) = app.config.as_mut() {
+            config.algorithm.clone_from(&algorithm);
+        }
+        element::<HtmlSelectElement>(&app.document, "algorithm").set_value(&algorithm);
+        render_comparison(&app);
+    }
+    accept_result(state, result);
+}
+
+fn accept_comparison(state: &Rc<RefCell<AppState>>, rows: Vec<ComparisonRow>) {
+    let first = rows.iter().position(|(_, result)| result.is_ok());
+    let count = rows.len();
+    state.borrow_mut().comparison = rows;
+    match first {
+        Some(index) => show_comparison(state, index),
+        None => render_comparison(&state.borrow()),
+    }
+    let app = state.borrow();
+    say(
+        &app.document,
+        &format!("Compared {count} algorithms on the same graph, ports and seed, every agent at node 0. Choose a row to play it."),
+        "",
+    );
 }
 
 /// The graph and starting nodes a configuration describes.
@@ -2160,7 +2509,7 @@ fn compare_schedules(state: &Rc<RefCell<AppState>>) {
 }
 
 /// Fills the comparison table from the worker's results.
-fn show_comparison(document: &Document, seed: u32, results: &JsValue) {
+fn show_schedule_comparison(document: &Document, seed: u32, results: &JsValue) {
     let rows = Array::from(results);
     let read = |row: &JsValue, name: &str| Reflect::get(row, &name.into()).ok();
     let number =
@@ -2193,7 +2542,7 @@ fn show_comparison(document: &Document, seed: u32, results: &JsValue) {
         ));
     }
     html.push_str("</tbody>");
-    let table: Element = element(document, "compareTable");
+    let table: Element = element(document, "scheduleCompareTable");
     table.set_inner_html(&html);
     let _ = table.class_list().remove_1("hidden");
     say(
@@ -2363,6 +2712,7 @@ fn import_file(state: &Rc<RefCell<AppState>>, event: Event) {
                 app.result = Some(data.result.clone());
                 app.frames = data.frames;
                 app.frame = 0;
+                refresh_notes(&mut app);
                 app.layout.clear();
                 app.layout_size = (0.0, 0.0);
                 let _ = element::<Element>(&app.document, "emptyState")
@@ -2556,6 +2906,9 @@ pub fn start() -> Result<(), JsValue> {
         config: None,
         result: None,
         frames: Vec::new(),
+        notes: Vec::new(),
+        comparison: Vec::new(),
+        compare_selected: None,
         frame: 0,
         timer: None,
         layout: Vec::new(),
@@ -2563,6 +2916,27 @@ pub fn start() -> Result<(), JsValue> {
         compare_seed: None,
     }));
     hook_click(&state, "run", run);
+    hook_click(&state, "compare", compare);
+    hook_click(&state, "comparePreset", compare_preset);
+    {
+        // One listener for the whole comparison table: a row's Play button
+        // carries its index in `data-compare`.
+        let state = Rc::clone(&state);
+        let closure = Closure::<dyn FnMut(Event)>::new(move |event: Event| {
+            let index = event
+                .target()
+                .and_then(|target| target.dyn_into::<Element>().ok())
+                .and_then(|target| target.closest("[data-compare]").ok().flatten())
+                .and_then(|button| button.get_attribute("data-compare"))
+                .and_then(|value| value.parse::<usize>().ok());
+            if let Some(index) = index {
+                show_comparison(&state, index);
+            }
+        });
+        let _ = element::<Element>(&document, "compareTable")
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());
+        closure.forget();
+    }
     hook_click(&state, "cancel", cancel);
     hook_click(&state, "compareSchedules", compare_schedules);
     hook_click(&state, "export", export_json);
@@ -2765,14 +3139,30 @@ fn tooltip(state: &Rc<RefCell<AppState>>, event: MouseEvent) {
         Some(v) => v,
         None => return,
     };
+    let rooted = app
+        .config
+        .as_ref()
+        .is_some_and(|config| config.algorithm == "rooted");
+    // RootedDisp's roles, with its leader marked: the paper makes the
+    // largest ID, the last agent here, a_max.
+    let names = if rooted {
+        ["settler (home)", "explorer", "helper"]
+    } else {
+        ["settled", "unsettled", "waiting"]
+    };
+    let leader = frame.positions.len().saturating_sub(1);
     let agents: Vec<String> = frame
         .positions
         .iter()
         .enumerate()
         .filter(|(_, position)| **position as usize == node)
         .map(|(i, position)| {
-            let status = ["settled", "unsettled", "waiting"]
-                [frame.statuses.get(i).copied().unwrap_or(1) as usize % 3];
+            let status = names[frame.statuses.get(i).copied().unwrap_or(1) as usize % 3];
+            let status = if rooted && i == leader {
+                format!("{status} · leader a_max")
+            } else {
+                status.to_owned()
+            };
             let home = frame
                 .homes
                 .get(i)
@@ -3231,6 +3621,93 @@ mod tests {
             frames.iter().map(|frame| frame.step).collect::<Vec<_>>(),
             vec![0, 1, 2]
         );
+    }
+
+    #[test]
+    fn decoded_frames_keep_the_phase_of_their_step() {
+        // One PhaseStarted(helpers home = 10) event and one checkpoint, both at
+        // step 1, for a single agent at node 0.
+        let mut bytes = vec![1, 2, 0, 0];
+        bytes.extend_from_slice(&2u32.to_le_bytes());
+        bytes.push(2);
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.extend([0, 10]);
+        bytes.push(3);
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.extend_from_slice(&1u32.to_le_bytes());
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend([0, 1]);
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        let result = ResultData {
+            positions: vec![0],
+            statuses: vec![0],
+            homes: vec![0],
+            termination_code: 0,
+            rounds: 1,
+            moves: 0,
+            probes: 0,
+            render_record_count: 2,
+            render_truncated: false,
+            render_bytes: bytes,
+        };
+        let frames = trace_frames(&result.render_bytes, &[0], &result);
+        let phases: Vec<Option<u8>> = frames.iter().map(|frame| frame.phase).collect();
+        assert_eq!(phases, vec![None, Some(10), Some(10)]);
+    }
+
+    fn frame(step: u64, phase: u8, positions: &[u32], statuses: &[u8]) -> Frame {
+        Frame {
+            step,
+            positions: positions.to_vec(),
+            statuses: statuses.to_vec(),
+            homes: vec![-1; positions.len()],
+            label: None,
+            phase: Some(phase),
+            ..Frame::default()
+        }
+    }
+
+    #[test]
+    fn rooted_notes_number_probes_passes_and_moves() {
+        // Agents 0 (settler at node 0), 1 (explorer), 2 (a_max).
+        let frames = vec![
+            frame(0, 9, &[0, 0, 0], &[0, 1, 1]),
+            frame(1, 1, &[0, 1, 0], &[0, 1, 1]),
+            frame(2, 2, &[0, 0, 0], &[0, 1, 1]),
+            frame(3, 3, &[0, 1, 1], &[0, 0, 1]),
+            frame(4, 1, &[0, 1, 0], &[0, 0, 1]),
+            frame(5, 2, &[1, 1, 1], &[2, 0, 1]),
+            frame(6, 1, &[1, 1, 2], &[2, 0, 1]),
+            frame(7, 2, &[1, 1, 1], &[2, 0, 1]),
+            frame(8, 10, &[0, 1, 1], &[0, 0, 1]),
+            frame(9, 3, &[0, 1, 0], &[0, 0, 1]),
+        ];
+        let notes = frame_notes(&frames, "rooted");
+        assert_eq!(notes[0], "Start");
+        assert_eq!(
+            notes[1],
+            "Step 1 · Probe 1, pass 1 · probe out · no helpers"
+        );
+        assert_eq!(
+            notes[3],
+            "Step 3 · forward move · agent 1 settles at node 1"
+        );
+        assert_eq!(
+            notes[4],
+            "Step 4 · Probe 2, pass 1 · probe out · no helpers"
+        );
+        assert_eq!(
+            notes[5],
+            "Step 5 · Probe 2, pass 1 · probe back · 1 helper at node 1"
+        );
+        assert_eq!(
+            notes[6],
+            "Step 6 · Probe 2, pass 2 · probe out · 1 helper at node 1"
+        );
+        assert_eq!(notes[8], "Step 8 · Probe 2 · helpers home");
+        assert_eq!(notes[9], "Step 9 · backward move to node 0");
+        // Other algorithms get the phase name only.
+        assert_eq!(frame_notes(&frames, "p1tree")[5], "Step 5 · probe back");
     }
 
     #[test]

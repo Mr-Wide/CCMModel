@@ -18,6 +18,8 @@ async function load() {
         const module = await import(`./wasm/web/ccm_wasm.js?v=${token}`);
         await module.default(`./wasm/web/ccm_wasm_bg.wasm?v=${token}`);
         wasm = module;
+        // The page compares this with its own build, so a tab opened before a
+        // deploy does not mis-read a newer engine's trace.
         self.postMessage({ type: 'ready', buildId });
         return wasm;
       } catch (error) {
@@ -32,11 +34,14 @@ async function load() {
 
 load();
 
-/* The menu value names the algorithm, and for RootedAsync the schedule too. */
-function selectorFor(name) {
+// The UI's algorithm values, mapped to the adapter's selector; for RootedAsync
+// the value names the schedule too. Anything unrecognised falls back to
+// Drop-and-Freeze, as it always has.
+function algorithmSelector(name) {
   switch (name) {
     case 'help': return wasm.AlgorithmSelector.HelpByScouts;
     case 'p1tree': return wasm.AlgorithmSelector.P1Tree;
+    case 'rooted': return wasm.AlgorithmSelector.RootedDisp;
     case 'rooted_async': return wasm.AlgorithmSelector.RootedAsync;
     case 'rooted_async_random': return wasm.AlgorithmSelector.RootedAsyncRandom;
     default: return wasm.AlgorithmSelector.DropAndFreeze;
@@ -59,7 +64,7 @@ self.onmessage = async ({ data }) => {
       for (let i = 0; i < data.jobs.length; i++) {
         const job = data.jobs[i];
         // A job may name its own algorithm; the schedule comparison does.
-        const algorithm = selectorFor(job.algorithm ?? data.algorithm);
+        const algorithm = algorithmSelector(job.algorithm ?? data.algorithm);
         const simulation = new wasm.WasmSimulation(
           job.nodeCount, new Uint32Array(job.edges), new Uint32Array(job.starts),
           algorithm, wasm.TraceMode.Off, BigInt(job.roundLimit), 0, 1,
@@ -85,43 +90,72 @@ self.onmessage = async ({ data }) => {
     }
     return;
   }
+  if (data.type === 'compare') {
+    if (!wasm) await load();
+    if (!wasm) return;
+    // Every algorithm runs on the same graph, port labels and starts, so the
+    // rows differ only by algorithm. One failing algorithm is reported in its
+    // own row rather than losing the others.
+    const results = [];
+    const transfer = [];
+    for (let i = 0; i < data.algorithms.length; i++) {
+      const name = data.algorithms[i];
+      self.postMessage({ type: 'progress', message: `Comparing: ${i + 1} of ${data.algorithms.length}…` });
+      try {
+        const result = runOne(name, data);
+        results.push({ algorithm: name, result });
+        transfer.push(...transferables(result));
+      } catch (error) {
+        results.push({ algorithm: name, error: error?.message || String(error) });
+      }
+    }
+    self.postMessage({ type: 'compare-result', results }, transfer);
+    return;
+  }
   if (data.type !== 'run') return;
   if (!wasm) await load();
   if (!wasm) return;
   try {
-    self.postMessage({ type: 'progress', value: 0, message: 'Starting Rust simulation…' });
-    const algorithm = selectorFor(data.algorithm);
-    const traceMode = data.traceMode === 'full'
-      ? wasm.TraceMode.Full
-      : data.traceMode === 'bounded' ? wasm.TraceMode.Bounded : wasm.TraceMode.Off;
-    const simulation = new wasm.WasmSimulation(
-      data.nodeCount, new Uint32Array(data.edges), new Uint32Array(data.starts),
-      algorithm, traceMode, BigInt(data.roundLimit), data.maxTraceRecords, data.sampleEvery,
-    );
-    simulation.set_schedule_seed(BigInt(data.scheduleSeed ?? 0));
-    const output = simulation.run();
-    const positions = output.positions();
-    const statuses = output.statuses();
-    const homes = output.homes();
-    const renderBytes = output.render_bytes();
-    const result = {
-      positions,
-      statuses,
-      homes,
-      terminationCode: output.termination_code(),
-      rounds: Number(output.rounds()), moves: Number(output.moves()), probes: Number(output.probes()),
-      renderRecordCount: output.render_record_count(),
-      renderTruncated: output.render_truncated(),
-      renderBytes,
-    };
-    output.free();
-    simulation.free();
-    self.postMessage({ type: 'progress', value: 1, message: 'Rust simulation complete.' });
-    self.postMessage(
-      { type: 'result', result },
-      [positions.buffer, statuses.buffer, homes.buffer, renderBytes.buffer],
-    );
+    self.postMessage({ type: 'progress', value: 0, message: 'Starting the simulation…' });
+    const result = runOne(data.algorithm, data);
+    self.postMessage({ type: 'progress', value: 1, message: 'Simulation complete.' });
+    self.postMessage({ type: 'result', result }, transferables(result));
   } catch (error) {
     self.postMessage({ type: 'error', phase: 'run', message: error?.message || String(error) });
   }
 };
+
+// One simulation on the prepared inputs in `data`, as typed arrays the main
+// thread reads without copying.
+function runOne(name, data) {
+  const traceMode = data.traceMode === 'full'
+    ? wasm.TraceMode.Full
+    : data.traceMode === 'bounded' ? wasm.TraceMode.Bounded : wasm.TraceMode.Off;
+  const simulation = new wasm.WasmSimulation(
+    data.nodeCount, new Uint32Array(data.edges), new Uint32Array(data.starts),
+    algorithmSelector(name), traceMode, BigInt(data.roundLimit), data.maxTraceRecords, data.sampleEvery,
+  );
+  try {
+    // Seeds the asynchronous order of RootedAsync; other algorithms ignore it.
+    simulation.set_schedule_seed(BigInt(data.scheduleSeed ?? 0));
+    const output = simulation.run();
+    const result = {
+      positions: output.positions(),
+      statuses: output.statuses(),
+      homes: output.homes(),
+      terminationCode: output.termination_code(),
+      rounds: Number(output.rounds()), moves: Number(output.moves()), probes: Number(output.probes()),
+      renderRecordCount: output.render_record_count(),
+      renderTruncated: output.render_truncated(),
+      renderBytes: output.render_bytes(),
+    };
+    output.free();
+    return result;
+  } finally {
+    simulation.free();
+  }
+}
+
+function transferables(result) {
+  return [result.positions.buffer, result.statuses.buffer, result.homes.buffer, result.renderBytes.buffer];
+}

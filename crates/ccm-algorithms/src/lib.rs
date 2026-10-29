@@ -2,8 +2,8 @@
 //! port-1 vocabulary they share.
 //!
 //! `drop_and_freeze` and `help_by_scouts` are legacy baselines that preserve
-//! historical behaviour. `p1tree` and `rooted_async` are written from their
-//! paper: `p1tree` as a centralised, synchronous construction, and
+//! historical behaviour. `p1tree`, `rooted_async` and `rooted_disp` are written
+//! from their papers: `p1tree` as a centralised, synchronous construction,
 //! `rooted_async` agent by agent under any schedule. Every module is a
 //! self-contained, deterministic simulation over a `ccm_core::PortGraph`.
 //! Tests live in `ccm-experiments/tests`.
@@ -13,6 +13,7 @@ pub mod drop_and_freeze;
 pub mod help_by_scouts;
 pub mod p1tree;
 pub mod rooted_async;
+pub mod rooted_disp;
 
 /// Version of the algorithm implementations, recorded in every experiment row.
 pub const ALGORITHM_VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -15,12 +15,13 @@ use std::path::PathBuf;
 
 /// Every algorithm under the synchronous scheduler, and `RootedAsync` also
 /// under a random one, so its asynchronous behaviour is pinned too.
-const RUNS: [(Algorithm, SchedulerModel); 5] = [
+const RUNS: [(Algorithm, SchedulerModel); 6] = [
     (Algorithm::DropAndFreeze, SchedulerModel::Synchronous),
     (Algorithm::HelpByScouts, SchedulerModel::Synchronous),
     (Algorithm::P1Tree, SchedulerModel::Synchronous),
     (Algorithm::RootedAsync, SchedulerModel::Synchronous),
     (Algorithm::RootedAsync, SchedulerModel::Asynchronous),
+    (Algorithm::RootedDisp, SchedulerModel::Synchronous),
 ];
 
 const FAMILIES: [GraphFamily; 8] = [

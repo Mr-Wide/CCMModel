@@ -9,6 +9,8 @@ pub enum Algorithm {
     /// `RootedAsync`: the same paper's asynchronous algorithm, each agent
     /// acting only on what it sees at its own node.
     RootedAsync,
+    /// `RootedDisp`, the rooted HEO-DFS of Sudo et al. (Section 3).
+    RootedDisp,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
