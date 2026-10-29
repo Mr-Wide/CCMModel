@@ -164,7 +164,7 @@ including the large cases, and prints a PASS or FAIL line per property.
 
    | Part | Bound | Observed, k up to 256 |
    |---|---|---|
-   | Epochs per DFS step (finding the next node) | ≤ 40 | ≤ 24 synchronous, ≤ 13 random, the same for k = 8 and k = 256 |
+   | Epochs per DFS step (finding the next node) | ≤ 40 | ≤ 26 synchronous, ≤ 13 random, ≤ 18 interleaved, the same for k = 8 and k = 256 |
    | Probe batches per node (Remark 1) | ≤ 3 | ≤ 2 |
    | Scouts at a probe (Lemma 7) | ≥ ⌈(k−2)/3⌉ | 38-99% of k |
    | DFS steps (Claim 1: each node entered at most twice) | ≤ 4k | ≤ 2.05k |
