@@ -17,7 +17,8 @@ The charts are the control flow as implemented, not as idealised: where the
 implementation departs from a paper, the chart shows what the code does and the
 notes say why. Read [behavior-spec.md](behavior-spec.md) for Drop-and-Freeze and
 Help-by-Scouts, [p1tree.md](p1tree.md) for P1Tree,
-[rooted-disp.md](rooted-disp.md) for RootedDisp, and the
+[rooted-disp.md](rooted-disp.md) for RootedDisp, [rendezvous.md](rendezvous.md)
+for Rendezvous, and the
 [gap and trace note](2507.01298-optimal-dispersion-under-asynchrony/gap-and-trace-note.md)
 for RootedAsync, before drawing conclusions from any of them. The interactive version, [`docs.html`](../docs.html),
 explains every box and opens its code.
@@ -52,6 +53,21 @@ The port-label row is the one that catches people out. Drop-and-Freeze discards
 the port assignment an experiment asked for, so sweeping `--ports` changes
 nothing for it; P1Tree's whole behaviour turns on which edges happen to carry
 port 1.
+
+## Beyond dispersion
+
+Rendezvous is not a dispersion: two agents start apart and the run ends when
+they meet. It is the first of the algorithms in which agents compute something
+together rather than spread out.
+
+| | Rendezvous |
+| --- | --- |
+| Start | two agents on two different nodes of a tree (required) |
+| Who moves | each agent alone, by its own schedule: explore on a 1, wait on a 0 |
+| What it reads | its label, its memory, and the degree and entry port of its node |
+| Port labels | as given; the walk leaves by the port after the entry port |
+| Tree | the graph itself; refused if it is not one |
+| Stops when | both agents stand on one node at the end of a round, or the round limit |
 ";
 
 /// Text for a mermaid label: quotes and angle brackets as entities.
