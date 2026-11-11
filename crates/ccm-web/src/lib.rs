@@ -6,6 +6,9 @@
 
 mod dashboard;
 mod docs;
+mod rendezvous_view;
+
+use rendezvous_view::RendezvousData;
 
 use js_sys::{Array, Int32Array, Object, Reflect, Uint32Array, Uint8Array};
 use serde::{Deserialize, Serialize};
@@ -86,6 +89,10 @@ pub struct Config {
     /// placement. Defaulted so older exports still import.
     #[serde(default = "default_groups")]
     pub groups: usize,
+    /// Rendezvous's two agent labels. Empty for other algorithms, and in
+    /// exports from before rendezvous existed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labels: Vec<u32>,
 }
 
 const fn default_groups() -> usize {
@@ -153,6 +160,10 @@ pub struct ResultData {
     pub render_truncated: bool,
     #[serde(rename = "renderBytes", default, skip_serializing)]
     pub render_bytes: Vec<u8>,
+    /// Rendezvous only: the meeting, the block length, the round limit and
+    /// the memory per agent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rendezvous: Option<RendezvousData>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -372,6 +383,11 @@ pub fn make_graph_full(
             }
         }
     }
+    if family == "random_tree" {
+        for (a, b) in random_tree_edges(n, seed) {
+            add(a, b);
+        }
+    }
     if family == "tree" {
         let branching = tree_branching.max(1);
         for i in 1..n {
@@ -396,6 +412,43 @@ pub fn make_graph_full(
         grid_columns,
         tree_branching,
     }
+}
+
+/// A uniformly random labelled tree on `n` nodes, decoded from a seeded
+/// Prüfer sequence: the page's counterpart of the native `random-tree`
+/// family. Its shapes range from paths to stars.
+fn random_tree_edges(n: usize, seed: u32) -> Vec<(usize, usize)> {
+    if n < 2 {
+        return Vec::new();
+    }
+    let mut state = if seed == 0 { 0x9e37_79b9 } else { seed };
+    let mut next = || {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        state as usize
+    };
+    let sequence: Vec<usize> = (0..n - 2).map(|_| next() % n).collect();
+    let mut degree = vec![1_usize; n];
+    for &node in &sequence {
+        degree[node] += 1;
+    }
+    let mut leaves: BTreeSet<usize> = (0..n).filter(|&node| degree[node] == 1).collect();
+    let mut edges = Vec::with_capacity(n - 1);
+    for &node in &sequence {
+        let Some(leaf) = leaves.pop_first() else {
+            break;
+        };
+        edges.push((leaf.min(node), leaf.max(node)));
+        degree[node] -= 1;
+        if degree[node] == 1 {
+            leaves.insert(node);
+        }
+    }
+    if let (Some(a), Some(b)) = (leaves.pop_first(), leaves.pop_first()) {
+        edges.push((a, b));
+    }
+    edges
 }
 
 /// Display name for an algorithm selector value.
@@ -442,6 +495,7 @@ fn algorithm_label(value: &str) -> &'static str {
         "rooted" => "RootedDisp",
         "rooted_async" => "RootedAsync (synchronous)",
         "rooted_async_random" => "RootedAsync (asynchronous)",
+        "rendezvous" => "Rendezvous",
         _ => "Drop and Freeze",
     }
 }
@@ -468,6 +522,36 @@ pub(crate) fn sync_schedule_menu(document: &Document) {
         }
     }
     sync_placement(document, needs_rooted_start(&algorithm));
+    sync_rendezvous(document, algorithm == "rendezvous");
+}
+
+/// Rendezvous runs exactly two agents from two seeded distinct nodes, with
+/// labels from the Labels box: it shows that box and its note, fixes the
+/// agent count at 2 and sets the placement menu aside. The dashboard has
+/// none of these controls.
+fn sync_rendezvous(document: &Document, rendezvous: bool) {
+    for id in ["labelsWrap", "rendezvousNote"] {
+        if let Some(wrap) = document.get_element_by_id(id) {
+            let _ = wrap.class_list().toggle_with_force("hidden", !rendezvous);
+        }
+    }
+    let Some(agents) = document
+        .get_element_by_id("labels")
+        .and_then(|_| document.get_element_by_id("agents"))
+        .and_then(|e| e.dyn_into::<HtmlInputElement>().ok())
+    else {
+        return;
+    };
+    if rendezvous {
+        agents.set_value("2");
+    }
+    agents.set_disabled(rendezvous);
+    if let Some(placement) = document
+        .get_element_by_id("placement")
+        .and_then(|e| e.dyn_into::<HtmlSelectElement>().ok())
+    {
+        placement.set_disabled(rendezvous);
+    }
 }
 
 /// Help by Scouts, P1Tree, RootedDisp and `RootedAsync` are defined for a
@@ -520,11 +604,23 @@ fn time_unit(algorithm: &str) -> &'static str {
 }
 
 fn read_config(document: &Document) -> Config {
+    let algorithm = effective_algorithm(document);
+    let rendezvous = algorithm == "rendezvous";
     let node_count = number(document, "nodes", 26, 1, 10_000);
-    let agent_count = number(document, "agents", 5.min(node_count), 1, node_count);
+    let agent_count = if rendezvous {
+        2.min(node_count)
+    } else {
+        number(document, "agents", 5.min(node_count), 1, node_count)
+    };
     element::<HtmlInputElement>(document, "agents").set_value(&agent_count.to_string());
+    // An invalid Labels box is reported by `prepare`, which reparses it.
+    let labels = if rendezvous {
+        rendezvous_view::parse_labels(&value(document, "labels")).unwrap_or_else(|_| vec![1, 2])
+    } else {
+        Vec::new()
+    };
     Config {
-        algorithm: effective_algorithm(document),
+        algorithm,
         family: select_value(document, "family"),
         placement: select_value(document, "placement"),
         node_count,
@@ -537,6 +633,7 @@ fn read_config(document: &Document) -> Config {
         max_trace_records: number(document, "traceLimit", 600, 0, 1_000_000),
         sample_every: number(document, "sampleEvery", 4, 1, 1_000_000),
         groups: number(document, "groups", 3, 1, agent_count),
+        labels,
     }
 }
 
@@ -994,6 +1091,28 @@ fn update_frame_label(app: &AppState) {
             .get(app.frame)
             .map_or_else(String::new, frame_caption),
     );
+    update_rendezvous_panel(app);
+}
+
+/// Shows rendezvous's strings and blocks for the current frame, or hides the
+/// panel for any other run.
+fn update_rendezvous_panel(app: &AppState) {
+    let Some(panel) = app.document.get_element_by_id("rendezvousPanel") else {
+        return;
+    };
+    let shown = app
+        .config
+        .as_ref()
+        .zip(app.result.as_ref())
+        .and_then(|(config, result)| {
+            let data = result.rendezvous?;
+            let step = app.frames.get(app.frame)?.step;
+            Some(rendezvous_view::panel_html(&config.labels, &data, step))
+        });
+    let _ = panel
+        .class_list()
+        .toggle_with_force("hidden", shown.is_none());
+    panel.set_inner_html(shown.as_deref().unwrap_or(""));
 }
 
 /// What a `RootedAsync` frame adds to the picture: the probes the head just
@@ -1032,7 +1151,13 @@ fn refresh_notes(app: &mut AppState) {
         .config
         .as_ref()
         .map_or("", |config| config.algorithm.as_str());
-    app.notes = frame_notes(&app.frames, algorithm);
+    let rendezvous = app.result.as_ref().and_then(|result| result.rendezvous);
+    app.notes = match (algorithm, rendezvous, app.config.as_ref()) {
+        ("rendezvous", Some(data), Some(config)) => {
+            rendezvous_view::notes(&app.frames, &config.labels, &data)
+        }
+        _ => frame_notes(&app.frames, algorithm),
+    };
 }
 
 fn set_timeline(app: &AppState) {
@@ -1891,6 +2016,25 @@ fn result_from_message(data: &JsValue) -> Result<ResultData, String> {
             .as_bool()
             .ok_or_else(|| "worker render truncation flag is invalid".to_owned())?,
         render_bytes: Uint8Array::new(&render_bytes).to_vec(),
+        rendezvous: rendezvous_from_message(data),
+    })
+}
+
+/// The rendezvous fields of a worker result, present when the engine ran
+/// rendezvous (its block length is then at least 2).
+fn rendezvous_from_message(data: &JsValue) -> Option<RendezvousData> {
+    let number = |name: &str| {
+        Reflect::get(data, &name.into())
+            .ok()
+            .and_then(|value| value.as_f64())
+    };
+    let block_len = number("blockLen").filter(|&value| value > 0.0)?;
+    Some(RendezvousData {
+        meeting_node: number("meetingNode").map_or(-1, |value| value as i32),
+        meeting_round: number("meetingRound").map_or(0, |value| value as u64),
+        block_len: block_len as u64,
+        round_bound: number("roundBound").map_or(0, |value| value as u64),
+        memory_bits: number("memoryBits").map_or(0, |value| value as u64),
     })
 }
 
@@ -1948,7 +2092,20 @@ fn accept_result(state: &Rc<RefCell<AppState>>, result: ResultData) {
     }
     set_timeline(&app);
     set_disabled(&element::<HtmlElement>(&app.document, "export"), false);
-    if understood {
+    if let (true, Some(data)) = (understood, result.rendezvous) {
+        let outcome = if data.meeting_node >= 0 {
+            format!(
+                "Met on node {} in round {} (limit {}).",
+                data.meeting_node, data.meeting_round, data.round_bound
+            )
+        } else {
+            format!(
+                "Stopped after {} rounds without meeting; raise the round limit (the task's limit is {}).",
+                result.rounds, data.round_bound
+            )
+        };
+        say(&app.document, &outcome, "");
+    } else if understood {
         say(
             &app.document,
             &format!(
@@ -2027,6 +2184,13 @@ fn post_run(
     )?;
     // Seeds RootedAsync's asynchronous order; other algorithms ignore it.
     Reflect::set(&message, &"scheduleSeed".into(), &config.seed.into())?;
+    if !config.labels.is_empty() {
+        Reflect::set(
+            &message,
+            &"labels".into(),
+            &Uint32Array::from(config.labels.as_slice()),
+        )?;
+    }
     worker.post_message(&message)
 }
 
@@ -2241,6 +2405,35 @@ fn prepare(state: &Rc<RefCell<AppState>>, rooted: bool) -> Option<(Config, Graph
         say(&document, "Agents cannot exceed nodes.", "error");
         return None;
     }
+    if config.algorithm == "rendezvous" {
+        if let Err(message) = rendezvous_view::parse_labels(&value(&document, "labels")) {
+            say(&document, &message, "error");
+            return None;
+        }
+        if !rendezvous_view::is_tree_family(&config.family) {
+            say(
+                &document,
+                "Rendezvous runs on trees: choose Path, Star, Balanced tree or Random tree.",
+                "error",
+            );
+            return None;
+        }
+        if config.node_count < 2 {
+            say(
+                &document,
+                "Rendezvous needs at least 2 nodes, one per agent.",
+                "error",
+            );
+            return None;
+        }
+        // The agents are certain to meet by the task's exact limit, so a lower
+        // limit would only cut the run short.
+        let bound = rendezvous_view::round_bound(config.node_count, &config.labels);
+        if config.round_limit < bound {
+            config.round_limit = bound;
+            element::<HtmlInputElement>(&document, "roundLimit").set_value(&bound.to_string());
+        }
+    }
     if needs_rooted_start(&select_value(&document, "algorithm")) && config.placement != "rooted" {
         say(&document, "Help by Scouts, P1Tree, RootedDisp and RootedAsync need every agent to start at node 0. Choose \u{201c}Rooted at node 0\u{201d}.", "error");
         return None;
@@ -2410,6 +2603,9 @@ fn prepared_input(config: &Config) -> (Graph, Vec<u32>) {
 /// each hold a crowd. An export from before groups existed may say
 /// `spread`, which is one agent per node.
 fn start_nodes(config: &Config) -> Vec<u32> {
+    if config.algorithm == "rendezvous" {
+        return rendezvous_view::start_pair(&seeded_shuffle(config.node_count, config.seed));
+    }
     let groups = match config.placement.as_str() {
         "rooted" => return vec![0; config.agent_count],
         "spread" => config.agent_count,
@@ -3227,6 +3423,7 @@ mod tests {
             max_trace_records: 600,
             sample_every: 4,
             groups,
+            labels: Vec::new(),
         };
         assert_eq!(start_nodes(&config("rooted", 3)), vec![0; 7]);
         let grouped = start_nodes(&config("groups", 3));
@@ -3285,6 +3482,7 @@ mod tests {
             render_record_count: 1,
             render_truncated: false,
             render_bytes: vec![1, 2, 0, 0, 1],
+            rendezvous: None,
         };
         assert_eq!(trace_frames(&result.render_bytes, &[0], &result).len(), 2);
     }
@@ -3304,6 +3502,7 @@ mod tests {
             render_record_count: 1,
             render_truncated: false,
             render_bytes: vec![1, 2, 0, 0, 1, 0, 0, 0, 99, 1, 0, 0, 0, 0, 0, 0, 0],
+            rendezvous: None,
         };
         let (frames, understood) = read_trace(&result.render_bytes, &[0], &result);
         assert!(!understood);
@@ -3615,6 +3814,7 @@ mod tests {
             render_record_count: 2,
             render_truncated: false,
             render_bytes: bytes,
+            rendezvous: None,
         };
         let frames = trace_frames(&result.render_bytes, &[0], &result);
         assert_eq!(
@@ -3649,6 +3849,7 @@ mod tests {
             render_record_count: 2,
             render_truncated: false,
             render_bytes: bytes,
+            rendezvous: None,
         };
         let frames = trace_frames(&result.render_bytes, &[0], &result);
         let phases: Vec<Option<u8>> = frames.iter().map(|frame| frame.phase).collect();
