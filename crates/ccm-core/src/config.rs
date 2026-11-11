@@ -11,6 +11,9 @@ pub enum Algorithm {
     RootedAsync,
     /// `RootedDisp`, the rooted HEO-DFS of Sudo et al. (Section 3).
     RootedDisp,
+    /// Rendezvous of two labelled agents in a tree, Dessmark et al. 2006.
+    /// Not a dispersion: the run ends when the agents meet.
+    Rendezvous,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -19,7 +22,11 @@ pub enum GraphModel {
     Cycle,
     Star,
     Complete,
-    RandomConnected { edges: usize },
+    RandomConnected {
+        edges: usize,
+    },
+    /// A tree drawn uniformly among the labelled trees on `nodes` nodes.
+    RandomTree,
     Explicit,
 }
 

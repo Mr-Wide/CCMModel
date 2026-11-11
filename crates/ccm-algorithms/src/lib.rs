@@ -1,17 +1,19 @@
-//! The CCM dispersion algorithms, one module each, plus [`common`] for the
+//! The CCM algorithms, one module each, plus [`common`] for the
 //! port-1 vocabulary they share.
 //!
 //! `drop_and_freeze` and `help_by_scouts` are legacy baselines that preserve
 //! historical behaviour. `p1tree`, `rooted_async` and `rooted_disp` are written
 //! from their papers: `p1tree` as a centralised, synchronous construction,
-//! `rooted_async` agent by agent under any schedule. Every module is a
-//! self-contained, deterministic simulation over a `ccm_core::PortGraph`.
+//! `rooted_async` agent by agent under any schedule. `rendezvous` is not a
+//! dispersion: two labelled agents meet in a tree (Dessmark et al.). Every
+//! module is a self-contained, deterministic simulation over a `ccm_core::PortGraph`.
 //! Tests live in `ccm-experiments/tests`.
 
 pub mod common;
 pub mod drop_and_freeze;
 pub mod help_by_scouts;
 pub mod p1tree;
+pub mod rendezvous;
 pub mod rooted_async;
 pub mod rooted_disp;
 

@@ -17,6 +17,9 @@ pub struct RunRequest {
     pub seed: u64,
     pub round_limit: Option<u64>,
     pub scheduler: SchedulerModel,
+    /// Agent labels, for the algorithms whose agents carry one (rendezvous).
+    /// Empty means the default, 1, 2, …; dispersion ignores labels.
+    pub labels: Vec<u32>,
 }
 
 impl RunRequest {
@@ -102,6 +105,8 @@ impl SimulationRunner for BuiltinRunner {
         let limit = request
             .round_limit
             .unwrap_or_else(|| per_agent * agents.saturating_add(1));
+        let mut labels = Vec::new();
+        let mut memory_bits_per_agent = None;
         let (termination, metrics) = match prepared.request.algorithm {
             Algorithm::DropAndFreeze => {
                 let result = ccm_algorithms::drop_and_freeze::simulate(
@@ -157,6 +162,12 @@ impl SimulationRunner for BuiltinRunner {
                 .map_err(|error| RunError::Message(error.to_string()))?;
                 (result.termination, metrics)
             }
+            Algorithm::Rendezvous => {
+                let run = run_rendezvous(prepared)?;
+                labels = run.labels;
+                memory_bits_per_agent = run.memory_bits_per_agent;
+                (run.termination, run.metrics)
+            }
         };
         Ok(RunResult {
             algorithm: prepared.request.algorithm,
@@ -173,8 +184,50 @@ impl SimulationRunner for BuiltinRunner {
             termination,
             metrics,
             scheduler: request.scheduler,
+            labels,
+            memory_bits_per_agent,
         })
     }
+}
+
+/// What a rendezvous run adds to the shared result row.
+struct RendezvousRun {
+    termination: Termination,
+    metrics: ComplexityMetrics,
+    labels: Vec<u32>,
+    memory_bits_per_agent: Option<u64>,
+}
+
+/// Runs rendezvous with the request's labels, or 1, 2, … when it names none.
+/// Without a round limit it gets twice the task's exact limit, so a run that
+/// overshoots the limit still finishes and the overshoot shows in the rounds
+/// column.
+fn run_rendezvous(prepared: &PreparedRun) -> Result<RendezvousRun, RunError> {
+    use ccm_algorithms::rendezvous;
+    let request = &prepared.request;
+    let labels = if request.labels.is_empty() {
+        rendezvous::default_labels(request.agents)
+    } else {
+        request.labels.clone()
+    };
+    let limit = request.round_limit.unwrap_or_else(|| {
+        2 * rendezvous::round_bound(prepared.graph.node_count(), &labels).max(1)
+    });
+    let (result, metrics, _) = rendezvous::simulate(
+        &prepared.graph,
+        &prepared.starts,
+        &labels,
+        limit,
+        ComplexityMetrics::default(),
+        NoTrace,
+    )
+    .map_err(|error| RunError::Message(error.to_string()))?;
+    Ok(RendezvousRun {
+        termination: result.termination,
+        metrics,
+        memory_bits_per_agent: result.agents.iter().map(|agent| agent.memory_bits).max(),
+        labels,
+    })
 }
 
 /// The schedule a request asks for, seeded from the run's own seed so a run is
@@ -214,6 +267,11 @@ pub struct RunResult {
     pub termination: Termination,
     pub metrics: ComplexityMetrics,
     pub scheduler: SchedulerModel,
+    /// The labels the agents ran with; empty for algorithms without labels.
+    pub labels: Vec<u32>,
+    /// Peak memory of the most demanding agent, in bits, for the algorithms
+    /// that count it per agent (rendezvous).
+    pub memory_bits_per_agent: Option<u64>,
 }
 
 impl RunResult {
@@ -234,6 +292,8 @@ impl RunResult {
             termination,
             metrics: ComplexityMetrics::default(),
             scheduler: prepared.request.scheduler,
+            labels: prepared.request.labels.clone(),
+            memory_bits_per_agent: None,
         }
     }
 
@@ -345,6 +405,7 @@ pub fn algorithm_label(algorithm: Algorithm) -> &'static str {
         Algorithm::P1Tree => "p1tree",
         Algorithm::RootedAsync => "rooted_async",
         Algorithm::RootedDisp => "rooted_disp",
+        Algorithm::Rendezvous => "rendezvous",
     }
 }
 
@@ -379,7 +440,10 @@ pub fn time_unit(scheduler: SchedulerModel) -> &'static str {
 pub fn algorithm_kind(algorithm: Algorithm) -> &'static str {
     match algorithm {
         Algorithm::DropAndFreeze | Algorithm::HelpByScouts => "legacy_baseline",
-        Algorithm::P1Tree | Algorithm::RootedAsync | Algorithm::RootedDisp => "paper",
+        Algorithm::P1Tree
+        | Algorithm::RootedAsync
+        | Algorithm::RootedDisp
+        | Algorithm::Rendezvous => "paper",
     }
 }
 
@@ -417,6 +481,7 @@ mod tests {
             seed,
             round_limit: Some(20),
             scheduler: SchedulerModel::Synchronous,
+            labels: Vec::new(),
         }
     }
 
