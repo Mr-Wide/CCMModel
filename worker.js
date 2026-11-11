@@ -44,6 +44,7 @@ function algorithmSelector(name) {
     case 'rooted': return wasm.AlgorithmSelector.RootedDisp;
     case 'rooted_async': return wasm.AlgorithmSelector.RootedAsync;
     case 'rooted_async_random': return wasm.AlgorithmSelector.RootedAsyncRandom;
+    case 'rendezvous': return wasm.AlgorithmSelector.Rendezvous;
     default: return wasm.AlgorithmSelector.DropAndFreeze;
   }
 }
@@ -138,19 +139,28 @@ function runOne(name, data) {
   try {
     // Seeds the asynchronous order of RootedAsync; other algorithms ignore it.
     simulation.set_schedule_seed(BigInt(data.scheduleSeed ?? 0));
+    // Rendezvous labels; other algorithms ignore them.
+    if (data.labels) simulation.set_labels(new Uint32Array(data.labels));
     const output = simulation.run();
-    const result = {
-      positions: output.positions(),
-      statuses: output.statuses(),
-      homes: output.homes(),
-      terminationCode: output.termination_code(),
-      rounds: Number(output.rounds()), moves: Number(output.moves()), probes: Number(output.probes()),
-      renderRecordCount: output.render_record_count(),
-      renderTruncated: output.render_truncated(),
-      renderBytes: output.render_bytes(),
-    };
-    output.free();
-    return result;
+    try {
+      return {
+        positions: output.positions(),
+        statuses: output.statuses(),
+        homes: output.homes(),
+        terminationCode: output.termination_code(),
+        rounds: Number(output.rounds()), moves: Number(output.moves()), probes: Number(output.probes()),
+        renderRecordCount: output.render_record_count(),
+        renderTruncated: output.render_truncated(),
+        renderBytes: output.render_bytes(),
+        meetingNode: output.meeting_node(),
+        meetingRound: Number(output.meeting_round()),
+        blockLen: Number(output.block_len()),
+        roundBound: Number(output.round_bound()),
+        memoryBits: Number(output.memory_bits()),
+      };
+    } finally {
+      output.free();
+    }
   } finally {
     simulation.free();
   }
