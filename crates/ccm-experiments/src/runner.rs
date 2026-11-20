@@ -43,6 +43,13 @@ pub enum RunError {
     Graph(crate::GraphGenerationError),
     Placement(crate::PlacementError),
     AlgorithmUnavailable(Algorithm),
+    /// The algorithm is defined only for a rooted start, every agent on one
+    /// node, and the placement scattered them. Refused before the run rather
+    /// than run under a model the algorithm was not written for.
+    RequiresRootedStart {
+        algorithm: Algorithm,
+        placement: String,
+    },
     Message(String),
 }
 
@@ -85,7 +92,6 @@ pub struct BuiltinRunner;
 impl SimulationRunner for BuiltinRunner {
     fn run(&self, prepared: &PreparedRun) -> Result<RunResult, RunError> {
         let request = &prepared.request;
-        let agents = u64::try_from(request.agents.max(1)).unwrap_or(u64::MAX);
         if request.algorithm != Algorithm::RootedAsync
             && request.scheduler != SchedulerModel::Synchronous
         {
@@ -94,17 +100,10 @@ impl SimulationRunner for BuiltinRunner {
                 algorithm_label(request.algorithm)
             )));
         }
-        // RootedAsync counts epochs and needs roughly 40 per agent on grids
-        // and random graphs, so it gets more headroom than the 40 rounds per
-        // agent the other algorithms are given.
-        let per_agent = if request.algorithm == Algorithm::RootedAsync {
-            100
-        } else {
-            40
-        };
+        check_placement(prepared)?;
         let limit = request
             .round_limit
-            .unwrap_or_else(|| per_agent * agents.saturating_add(1));
+            .unwrap_or_else(|| default_round_limit(request.algorithm, request.agents));
         let mut labels = Vec::new();
         let mut memory_bits_per_agent = None;
         let (termination, metrics) = match prepared.request.algorithm {
@@ -162,6 +161,7 @@ impl SimulationRunner for BuiltinRunner {
                 .map_err(|error| RunError::Message(error.to_string()))?;
                 (result.termination, metrics)
             }
+            Algorithm::GeneralDisp => run_general_disp(prepared, limit)?,
             Algorithm::Rendezvous => {
                 let run = run_rendezvous(prepared)?;
                 labels = run.labels;
@@ -202,6 +202,21 @@ struct RendezvousRun {
 /// Without a round limit it gets twice the task's exact limit, so a run that
 /// overshoots the limit still finishes and the overshoot shows in the rounds
 /// column.
+fn run_general_disp(
+    prepared: &PreparedRun,
+    limit: u64,
+) -> Result<(Termination, ComplexityMetrics), RunError> {
+    let (result, metrics, _) = ccm_algorithms::general_disp::simulate(
+        &prepared.graph,
+        &prepared.starts,
+        limit,
+        ComplexityMetrics::default(),
+        NoTrace,
+    )
+    .map_err(|error| RunError::Message(error.to_string()))?;
+    Ok((result.termination, metrics))
+}
+
 fn run_rendezvous(prepared: &PreparedRun) -> Result<RendezvousRun, RunError> {
     use ccm_algorithms::rendezvous;
     let request = &prepared.request;
@@ -397,6 +412,61 @@ pub fn execute_many_parallel<R: SimulationRunner>(
     })
 }
 
+/// Whether an algorithm is defined only for a rooted start. Help-by-Scouts is
+/// a legacy baseline that supports rooted placements only (see its module
+/// documentation); `P1Tree` and `RootedDisp` implement rooted constructions.
+#[must_use]
+pub const fn requires_rooted_start(algorithm: Algorithm) -> bool {
+    matches!(
+        algorithm,
+        Algorithm::HelpByScouts
+            | Algorithm::P1Tree
+            | Algorithm::RootedAsync
+            | Algorithm::RootedDisp
+    )
+}
+
+/// Refuses a placement the algorithm is not defined for.
+///
+/// # Errors
+///
+/// Returns [`RunError::RequiresRootedStart`] when a rooted-only algorithm is
+/// given agents on more than one node.
+pub fn check_placement(prepared: &PreparedRun) -> Result<(), RunError> {
+    let algorithm = prepared.request.algorithm;
+    let rooted = prepared.starts.windows(2).all(|pair| pair[0] == pair[1]);
+    if requires_rooted_start(algorithm) && !rooted {
+        return Err(RunError::RequiresRootedStart {
+            algorithm,
+            placement: prepared.request.placement.label(),
+        });
+    }
+    Ok(())
+}
+
+/// The round limit used when a request sets none.
+///
+/// Most algorithms get `40 (k + 1)` rounds. `RootedAsync` counts epochs and
+/// needs roughly 40 per agent on grids and random graphs, so it gets
+/// `100 (k + 1)`. `GeneralDisp` spends twelve steps per unit and Theorem 2
+/// bounds its units by `O(k log² k)`, so it gets `480 k (⌈log2 k⌉ + 1)²`
+/// steps: far above any run in its tests, and still finite.
+#[must_use]
+pub fn default_round_limit(algorithm: Algorithm, agents: usize) -> u64 {
+    let k = u64::try_from(agents.max(1)).unwrap_or(u64::MAX);
+    match algorithm {
+        Algorithm::GeneralDisp => {
+            let log = u64::from(k.next_power_of_two().trailing_zeros()) + 1;
+            480_u64
+                .saturating_mul(k)
+                .saturating_mul(log)
+                .saturating_mul(log)
+        }
+        Algorithm::RootedAsync => 100_u64.saturating_mul(k.saturating_add(1)),
+        _ => 40_u64.saturating_mul(k.saturating_add(1)),
+    }
+}
+
 #[must_use]
 pub fn algorithm_label(algorithm: Algorithm) -> &'static str {
     match algorithm {
@@ -405,6 +475,7 @@ pub fn algorithm_label(algorithm: Algorithm) -> &'static str {
         Algorithm::P1Tree => "p1tree",
         Algorithm::RootedAsync => "rooted_async",
         Algorithm::RootedDisp => "rooted_disp",
+        Algorithm::GeneralDisp => "general_disp",
         Algorithm::Rendezvous => "rendezvous",
     }
 }
@@ -443,6 +514,7 @@ pub fn algorithm_kind(algorithm: Algorithm) -> &'static str {
         Algorithm::P1Tree
         | Algorithm::RootedAsync
         | Algorithm::RootedDisp
+        | Algorithm::GeneralDisp
         | Algorithm::Rendezvous => "paper",
     }
 }

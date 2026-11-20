@@ -17,6 +17,15 @@ function getStringFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
+/**
+ * The slot, 1–12, of `GeneralDisp` time step `step`.
+ * @param {bigint} step
+ * @returns {number}
+ */
+export function general_disp_slot(step) {
+    const ret = wasm.general_disp_slot(step);
+    return ret;
+}
 
 let cachedUint32ArrayMemory0 = null;
 
@@ -59,7 +68,7 @@ function takeFromExternrefTable0(idx) {
 }
 /**
  * Algorithm selector shared by native and browser callers.
- * @enum {0 | 1 | 2 | 3 | 4 | 5 | 6}
+ * @enum {0 | 1 | 2 | 3 | 4 | 5 | 6 | 7}
  */
 export const AlgorithmSelector = Object.freeze({
     HelpByScouts: 0, "0": "HelpByScouts",
@@ -77,10 +86,14 @@ export const AlgorithmSelector = Object.freeze({
      */
     RootedAsyncRandom: 5, "5": "RootedAsyncRandom",
     /**
+     * `GeneralDisp`: agents may start on any nodes.
+     */
+    GeneralDisp: 6, "6": "GeneralDisp",
+    /**
      * Rendezvous of two labelled agents in a tree, with the labels set by
      * [`WasmSimulation::set_labels`].
      */
-    Rendezvous: 6, "6": "Rendezvous",
+    Rendezvous: 7, "7": "Rendezvous",
 });
 /**
  * Trace policy. `Bounded` uses the supplied record and sampling limits.
@@ -118,6 +131,15 @@ export class SimulationOutput {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_simulationoutput_free(ptr, 0);
+    }
+    /**
+     * `GeneralDisp` roles, groups, slots and merge events per frame, in the
+     * format of `encode_groups`; empty for other algorithms or without a trace.
+     * @returns {Uint8Array}
+     */
+    group_bytes() {
+        const ret = wasm.simulationoutput_group_bytes(this.__wbg_ptr);
+        return ret;
     }
     /**
      * Rendezvous: the most memory any agent used, in bits; 0 otherwise.

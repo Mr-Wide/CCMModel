@@ -42,6 +42,7 @@ function algorithmSelector(name) {
     case 'help': return wasm.AlgorithmSelector.HelpByScouts;
     case 'p1tree': return wasm.AlgorithmSelector.P1Tree;
     case 'rooted': return wasm.AlgorithmSelector.RootedDisp;
+    case 'general': return wasm.AlgorithmSelector.GeneralDisp;
     case 'rooted_async': return wasm.AlgorithmSelector.RootedAsync;
     case 'rooted_async_random': return wasm.AlgorithmSelector.RootedAsyncRandom;
     case 'rendezvous': return wasm.AlgorithmSelector.Rendezvous;
@@ -70,17 +71,23 @@ self.onmessage = async ({ data }) => {
           job.nodeCount, new Uint32Array(job.edges), new Uint32Array(job.starts),
           algorithm, wasm.TraceMode.Off, BigInt(job.roundLimit), 0, 1,
         );
-        simulation.set_schedule_seed(BigInt(job.seed ?? i));
-        const output = simulation.run();
-        results.push({
-          rounds: Number(output.rounds()),
-          moves: Number(output.moves()),
-          probes: Number(output.probes()),
-          completed: output.termination_code() === 0,
-          positions: output.positions(),
-        });
-        output.free();
-        simulation.free();
+        try {
+          simulation.set_schedule_seed(BigInt(job.seed ?? i));
+          const output = simulation.run();
+          try {
+            results.push({
+              rounds: Number(output.rounds()),
+              moves: Number(output.moves()),
+              probes: Number(output.probes()),
+              completed: output.termination_code() === 0,
+              positions: output.positions(),
+            });
+          } finally {
+            output.free();
+          }
+        } finally {
+          simulation.free();
+        }
         if ((i + 1) % 8 === 0 || i + 1 === data.jobs.length) {
           self.postMessage({ type: 'sweep-progress', done: i + 1, total: data.jobs.length });
         }
@@ -142,6 +149,7 @@ function runOne(name, data) {
     // Rendezvous labels; other algorithms ignore them.
     if (data.labels) simulation.set_labels(new Uint32Array(data.labels));
     const output = simulation.run();
+    // Freed even when a read throws, so a failed run does not leak WASM memory.
     try {
       return {
         positions: output.positions(),
@@ -157,6 +165,7 @@ function runOne(name, data) {
         blockLen: Number(output.block_len()),
         roundBound: Number(output.round_bound()),
         memoryBits: Number(output.memory_bits()),
+        groupBytes: output.group_bytes(),
       };
     } finally {
       output.free();
@@ -167,5 +176,5 @@ function runOne(name, data) {
 }
 
 function transferables(result) {
-  return [result.positions.buffer, result.statuses.buffer, result.homes.buffer, result.renderBytes.buffer];
+  return [result.positions.buffer, result.statuses.buffer, result.homes.buffer, result.renderBytes.buffer, result.groupBytes.buffer];
 }

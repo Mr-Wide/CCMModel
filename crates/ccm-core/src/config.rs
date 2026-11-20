@@ -11,6 +11,9 @@ pub enum Algorithm {
     RootedAsync,
     /// `RootedDisp`, the rooted HEO-DFS of Sudo et al. (Section 3).
     RootedDisp,
+    /// `GeneralDisp`, Sudo et al.'s HEO-DFS for any placement, with groups
+    /// merged by the Zombie method (Section 4).
+    GeneralDisp,
     /// Rendezvous of two labelled agents in a tree, Dessmark et al. 2006.
     /// Not a dispersion: the run ends when the agents meet.
     Rendezvous,

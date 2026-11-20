@@ -168,6 +168,7 @@ mod tests {
             (Algorithm::P1Tree, "paper"),
             (Algorithm::RootedAsync, "paper"),
             (Algorithm::RootedDisp, "paper"),
+            (Algorithm::GeneralDisp, "paper"),
             (Algorithm::Rendezvous, "paper"),
         ] {
             assert_eq!(
